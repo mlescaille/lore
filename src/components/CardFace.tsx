@@ -1,4 +1,8 @@
 import type { CSSProperties, Ref } from 'react'
+import { currentLook } from '../looks/look.ts'
+import { MemoirCard } from './looks/MemoirCard.tsx'
+import { ScrapbookCard } from './looks/ScrapbookCard.tsx'
+import { TabloidCard } from './looks/TabloidCard.tsx'
 
 export interface CardThemeRow {
   label: string
@@ -30,6 +34,14 @@ export interface CardModel {
 }
 
 export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<HTMLDivElement> }) {
+  const look = currentLook()
+  if (look === 'scrapbook') return <ScrapbookCard model={model} nodeRef={nodeRef} />
+  if (look === 'tabloid') return <TabloidCard model={model} nodeRef={nodeRef} />
+  if (look === 'memoir') return <MemoirCard model={model} nodeRef={nodeRef} />
+  return <DeskCard model={model} nodeRef={nodeRef} />
+}
+
+function DeskCard({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<HTMLDivElement> }) {
   const story = model.size === 'story'
   const width = 1080
   const height = story ? 1920 : 1080

@@ -1,0 +1,47 @@
+.roll-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: center;
+}
+.roll-primary,
+.roll-folder {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 18px;
+  cursor: pointer;
+}
+.roll-sample {
+  min-height: 52px;
+  padding: 0 16px;
+  cursor: pointer;
+  background: transparent;
+}
+.roll-primary span,
+.roll-folder span { pointer-events: none; }
+.roll-primary input,
+.roll-folder input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px;
+}
+.roll-folder { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .roll-folder { display: inline-flex; }
+}
+.sb,
+.tb,
+.mm { position: relative; }
+.look-drop {
+  position: absolute;
+  inset: 8px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+}

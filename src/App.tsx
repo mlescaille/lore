@@ -2,11 +2,16 @@ import { useEffect, useRef } from 'react'
 import { Footer } from './components/Footer.tsx'
 import { GuessStep } from './components/GuessStep.tsx'
 import { Landing } from './components/Landing.tsx'
+import { AltBar, LookNav } from './components/looks/AltBar.tsx'
+import { MemoirLanding } from './components/looks/MemoirLanding.tsx'
+import { ScrapbookLanding } from './components/looks/ScrapbookLanding.tsx'
+import { TabloidLanding } from './components/looks/TabloidLanding.tsx'
 import { RangeStep } from './components/RangeStep.tsx'
 import { Reveal } from './components/Reveal.tsx'
 import { StatusCard } from './components/StatusCard.tsx'
 import { Button } from './components/ui/button.tsx'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './components/ui/dialog.tsx'
+import { currentLook } from './looks/look.ts'
 import { useSession } from './useSession.ts'
 
 export default function App() {
@@ -19,29 +24,36 @@ export default function App() {
   }, [phase.type])
 
   const showForget = phase.type !== 'landing' || Boolean(session.saved)
+  const look = currentLook()
+  const landingProps = {
+    saved: session.saved,
+    onFiles: (files: File[]) => void session.startFiles(files),
+    onSample: () => void session.startSample(),
+    onOpenSaved: session.openSaved,
+    onForgetSaved: () => session.setConfirming(true),
+  }
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="shell bar">
-          <p className="brand">Lore</p>
-          {showForget && (
-            <Button variant="quiet" size="sm" onClick={() => session.setConfirming(true)}>
-              Forget
-            </Button>
-          )}
-        </div>
-      </header>
+      {look === 'desk' ? (
+        <header className="topbar">
+          <div className="shell bar">
+            <p className="brand">Lore</p>
+            {showForget && (
+              <Button variant="quiet" size="sm" onClick={() => session.setConfirming(true)}>
+                Forget
+              </Button>
+            )}
+          </div>
+        </header>
+      ) : (
+        <AltBar look={look} showForget={showForget} onForget={() => session.setConfirming(true)} />
+      )}
       <main className="shell" ref={heading} tabIndex={-1}>
-        {phase.type === 'landing' && (
-          <Landing
-            saved={session.saved}
-            onFiles={(files) => void session.startFiles(files)}
-            onSample={() => void session.startSample()}
-            onOpenSaved={session.openSaved}
-            onForgetSaved={() => session.setConfirming(true)}
-          />
-        )}
+        {phase.type === 'landing' && look === 'desk' && <Landing {...landingProps} />}
+        {phase.type === 'landing' && look === 'scrapbook' && <ScrapbookLanding {...landingProps} />}
+        {phase.type === 'landing' && look === 'tabloid' && <TabloidLanding {...landingProps} />}
+        {phase.type === 'landing' && look === 'memoir' && <MemoirLanding {...landingProps} />}
         {phase.type === 'preparing' && (
           <StatusCard eyebrow="On this device" title={phase.progress.label} detail="Duplicates come out. Dates get read. Nothing is uploaded." done={phase.progress.done} total={phase.progress.total} />
         )}
@@ -74,6 +86,7 @@ export default function App() {
         )}
       </main>
       <div className="shell">
+        {look !== 'desk' && <LookNav look={look} />}
         <Footer />
       </div>
       <Dialog open={session.confirming} onOpenChange={session.setConfirming}>
