@@ -1,6 +1,6 @@
-/** Swap these before deploying. Both are placeholders until the essay and site URL exist. */
+/** ESSAY_URL stays a placeholder until the essay exists. APP_URL is the public site. */
 export const ESSAY_URL = 'https://example.com/the-screenshot-as-autobiography'
-export const APP_URL = 'https://example.com/lore'
+export const APP_URL = 'https://mlescaille.com/lore'
 
 export const MAX_SHOTS = 500
 
