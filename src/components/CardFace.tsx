@@ -1,12 +1,4 @@
 import type { CSSProperties, Ref } from 'react'
-import { currentLook } from '../looks/look.ts'
-import { ArchiveCard } from './looks/ArchiveCard.tsx'
-import { MemoirCard } from './looks/MemoirCard.tsx'
-import { PosterCard } from './looks/PosterCard.tsx'
-import { ReceiptCard } from './looks/ReceiptCard.tsx'
-import { RetroCard } from './looks/RetroCard.tsx'
-import { ScrapbookCard } from './looks/ScrapbookCard.tsx'
-import { TabloidCard } from './looks/TabloidCard.tsx'
 
 export interface CardThemeRow {
   label: string
@@ -37,125 +29,206 @@ export interface CardModel {
   size: 'square' | 'story'
 }
 
-export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<HTMLDivElement> }) {
-  const look = currentLook()
-  if (look === 'scrapbook') return <ScrapbookCard model={model} nodeRef={nodeRef} />
-  if (look === 'tabloid') return <TabloidCard model={model} nodeRef={nodeRef} />
-  if (look === 'memoir') return <MemoirCard model={model} nodeRef={nodeRef} />
-  if (look === 'receipt') return <ReceiptCard model={model} nodeRef={nodeRef} />
-  if (look === 'poster') return <PosterCard model={model} nodeRef={nodeRef} />
-  if (look === 'archive') return <ArchiveCard model={model} nodeRef={nodeRef} />
-  if (look === 'retro') return <RetroCard model={model} nodeRef={nodeRef} />
-  return <DeskCard model={model} nodeRef={nodeRef} />
-}
+const PIXEL = 'Silkscreen, ui-monospace, monospace'
+const DISPLAY = 'Bungee, Impact, sans-serif'
+const BODY = '"Atkinson Hyperlegible", sans-serif'
 
-function DeskCard({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<HTMLDivElement> }) {
+export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<HTMLDivElement> }) {
   const story = model.size === 'story'
-  const width = 1080
-  const height = story ? 1920 : 1080
-  const pad = story ? 88 : 64
-  const epithetSize = model.epithet.length > 58 ? (story ? 78 : 54) : model.epithet.length > 44 ? (story ? 88 : 60) : story ? 100 : 68
-  const ink = '#1a1612'
-  const soft = '#5e564c'
-  const line = '#e4d9c8'
-  const paper = '#f3eee4'
+  const hits = model.guesses.filter((guess) => guess.matched).length
+  const rare = hits === model.guesses.length && hits > 0
+  const stats = model.themes.slice(0, 3)
+  const long = model.epithet.length > 42
+  const epithetSize = story ? (long ? 52 : 64) : long ? 34 : 42
+  const outer = story ? 1920 : 1080
+  const pad = story ? 40 : 28
+  const articleH = outer - pad * 2
+  const titleH = story ? 58 : 46
+  const flavorH = story ? 210 : 148
+  const contentH = articleH - 12 - titleH - flavorH
 
   const shell: CSSProperties = {
-    width,
-    height,
+    width: 1080,
+    height: outer,
     boxSizing: 'border-box',
-    background: paper,
-    color: ink,
+    overflow: 'hidden',
+    background: '#24143f',
     padding: pad,
     display: 'flex',
-    flexDirection: 'column',
-    gap: story ? 36 : 22,
-    fontFamily: '"Outfit Variable", sans-serif',
-  }
-  const display: CSSProperties = {
-    fontFamily: '"Fraunces Variable", Georgia, serif',
-    fontWeight: 560,
-    letterSpacing: '-0.03em',
-    lineHeight: 1.02,
-    margin: 0,
   }
 
   return (
     <div ref={nodeRef} style={shell}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <strong style={{ ...display, fontSize: story ? 42 : 28, fontStyle: 'italic', color: '#ef5b3c' }}>Lore</strong>
-        <span style={{ letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: story ? 18 : 14, color: soft }}>
-          screenshot biography
-        </span>
-      </div>
-      <h2 style={{ ...display, fontSize: epithetSize, maxWidth: 920 }}>{model.epithet}</h2>
-      <p style={{ margin: 0, fontSize: story ? 28 : 22, color: soft }}>
-        {model.rangeLabel}
-        {model.total > 0 ? ` · ${model.total} screenshots` : ''}
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: story ? 18 : 12 }}>
-        {model.themes.map((theme) => (
-          <div key={theme.label}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: story ? 28 : 22, marginBottom: 6 }}>
-              <span>{theme.label}</span>
-              <span>{Math.round(theme.share * 100)}%</span>
-            </div>
-            <div style={{ height: story ? 14 : 10, background: '#e7dfd1', borderRadius: 99 }}>
-              <div style={{ width: `${Math.max(4, Math.round(theme.share * 100))}%`, height: '100%', background: theme.color, borderRadius: 99 }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      {model.guesses.length > 0 && (
-        <div style={{ borderTop: `1px solid ${line}`, paddingTop: story ? 28 : 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-            <span style={{ letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: story ? 16 : 13, color: soft }}>You guessed</span>
-            <span style={{ letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: story ? 16 : 13, color: soft }}>The record</span>
-            {model.guesses.map((guess) => (
-              <GuessPair key={guess.guess} guess={guess} story={story} ink={ink} soft={soft} />
-            ))}
-          </div>
-        </div>
-      )}
-      {model.eras.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', gap: 6, height: story ? 120 : 56 }}>
-            {model.eras.map((era) => (
-              <div
-                key={era.label + era.color}
-                title={era.label}
-                style={{ flexGrow: Math.max(era.share, 0.08), background: era.color, borderRadius: 10 }}
+      <article
+        style={{
+          width: '100%',
+          height: articleH,
+          boxSizing: 'border-box',
+          background: '#efe4ff',
+          color: '#1a1028',
+          borderTop: '6px solid #fff6ff',
+          borderLeft: '6px solid #fff6ff',
+          borderBottom: '6px solid #3a2260',
+          borderRight: '6px solid #3a2260',
+          boxShadow: story ? '16px 16px 0 #120a22' : '12px 12px 0 #120a22',
+        }}
+      >
+        <header
+          style={{
+            height: titleH,
+            boxSizing: 'border-box',
+            background: '#4b1d78',
+            color: '#ffe14a',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            padding: story ? '0 22px' : '0 16px',
+            fontFamily: PIXEL,
+            fontSize: story ? 20 : 16,
+          }}
+        >
+          <span>LORE CARD</span>
+          <span style={{ background: '#67f2e4', color: '#1a1028', padding: story ? '6px 10px' : '4px 8px' }}>
+            {rare ? 'RARE' : 'COMMON'}
+          </span>
+        </header>
+        <div
+          style={{
+            height: contentH,
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+            padding: story ? '32px 40px 12px' : '20px 24px 8px',
+          }}
+        >
+          <p style={{ margin: 0, fontFamily: PIXEL, fontSize: story ? 18 : 14, color: '#4b1d78' }}>
+            {model.rangeLabel.toUpperCase()}
+          </p>
+          <h2
+            style={{
+              margin: story ? '16px 0 0' : '12px 0 0',
+              fontFamily: DISPLAY,
+              fontWeight: 400,
+              fontSize: epithetSize,
+              lineHeight: 1.12,
+              letterSpacing: '0.01em',
+              textTransform: 'uppercase',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {model.epithet}
+          </h2>
+          <div style={{ display: 'flex', gap: 8, marginTop: story ? 20 : 14 }}>
+            {['#ff4fa3', '#ffe14a', '#67f2e4', '#4b1d78'].map((color) => (
+              <span
+                key={color}
+                style={{
+                  width: story ? 26 : 16,
+                  height: story ? 26 : 16,
+                  background: color,
+                  border: '2px solid #1a1028',
+                }}
               />
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, color: soft, fontSize: story ? 18 : 14 }}>
-            <span>{model.eras[0]?.label}</span>
-            <span>{model.eras[model.eras.length - 1]?.label}</span>
+          {story && (
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginTop: 28 }}>
+              <span style={{ fontFamily: DISPLAY, fontSize: 112, lineHeight: 0.85, color: '#4b1d78' }}>{model.total}</span>
+              <span style={{ fontFamily: PIXEL, fontSize: 18, paddingBottom: 10 }}>SHOTS KEPT</span>
+            </div>
+          )}
+          <div style={{ marginTop: story ? 28 : 18, display: 'flex', flexDirection: 'column', gap: story ? 12 : 8 }}>
+            {stats.map((theme, index) => (
+              <div
+                key={theme.label}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                  background: index % 2 ? '#f7f1ff' : '#e2d2ff',
+                  borderTop: '3px solid #fff',
+                  borderLeft: '3px solid #fff',
+                  borderBottom: '3px solid #6b4a96',
+                  borderRight: '3px solid #6b4a96',
+                  padding: story ? '12px 14px' : '8px 10px',
+                }}
+              >
+                <span style={{ fontFamily: PIXEL, fontSize: story ? 18 : 14, flex: 'none' }}>
+                  {['HP', 'ATK', 'DEF'][index] ?? 'XP'}
+                </span>
+                <span
+                  style={{
+                    fontFamily: BODY,
+                    fontSize: story ? 26 : 18,
+                    fontWeight: 700,
+                    textAlign: 'right',
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {theme.label}{' '}
+                  <span style={{ fontFamily: PIXEL, fontWeight: 400, fontSize: story ? 18 : 14 }}>
+                    {Math.max(1, Math.round(theme.share * model.total))}
+                  </span>
+                </span>
+              </div>
+            ))}
+            {!story && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontFamily: PIXEL,
+                  fontSize: 14,
+                  padding: '4px 4px 0',
+                }}
+              >
+                <span>SHOTS</span>
+                <span>{model.total}</span>
+              </div>
+            )}
           </div>
+          {story && model.eras.length > 0 && (
+            <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ margin: 0, fontFamily: PIXEL, fontSize: 16, color: '#4b1d78' }}>CHAPTERS</p>
+              {model.eras.slice(0, 4).map((era) => (
+                <div key={era.label} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <span style={{ width: 18, height: 18, background: era.color, border: '2px solid #1a1028', flex: 'none' }} />
+                  <span style={{ fontFamily: BODY, fontSize: 24, fontWeight: 700, lineHeight: 1.3 }}>{era.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-      <p style={{ ...display, fontStyle: 'italic', fontWeight: 460, fontSize: story ? 40 : 28, marginTop: 'auto' }}>{model.closingLine}</p>
-      <div style={{ letterSpacing: '0.18em', textTransform: 'uppercase', fontSize: story ? 16 : 13, color: soft }}>discover your lore</div>
+        <div
+          style={{
+            height: flavorH,
+            boxSizing: 'border-box',
+            margin: story ? '0 40px' : '0 24px',
+            background: '#1a1028',
+            color: '#67f2e4',
+            padding: story ? '18px 18px' : '12px 12px',
+            overflow: 'hidden',
+          }}
+        >
+            <p
+              style={{
+                margin: 0,
+                fontFamily: BODY,
+                fontSize: story ? 28 : 20,
+                lineHeight: 1.35,
+                fontWeight: 700,
+              }}
+            >
+              {model.closingLine}
+            </p>
+            {model.guesses.length > 0 && (
+              <p style={{ margin: story ? '12px 0 0' : '8px 0 0', fontFamily: PIXEL, fontSize: story ? 16 : 13, lineHeight: 1.5 }}>
+                GUESS: {model.guesses.map((guess) => guess.guess).join(', ').toUpperCase()}
+              </p>
+            )}
+        </div>
+      </article>
     </div>
-  )
-}
-
-function GuessPair({
-  guess,
-  story,
-  ink,
-  soft,
-}: {
-  guess: CardGuessRow
-  story: boolean
-  ink: string
-  soft: string
-}) {
-  const size = story ? 26 : 20
-  return (
-    <>
-      <span style={{ fontSize: size, color: ink }}>{guess.guess}</span>
-      <span style={{ fontSize: size, color: guess.matched ? ink : soft }}>{guess.matched ? guess.matchLabel : '—'}</span>
-    </>
   )
 }

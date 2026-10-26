@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type { SavedReading } from '../storage/idb.ts'
-import { Button } from './ui/button.tsx'
 import { filesFromDataTransfer } from '../pipeline/drop.ts'
+import type { SavedReading } from '../storage/idb.ts'
+import { TitleBar } from './Window.tsx'
 
 const ACCEPT = 'image/png,image/jpeg,image/heic,image/heif,.heic,.heif,.jpg,.jpeg,.png'
 
@@ -22,7 +22,7 @@ export function Landing({
 
   return (
     <div
-      className={dragging ? 'hero is-dragging' : 'hero'}
+      className={dragging ? 'stage is-dragging' : 'stage'}
       onDragEnter={(event) => {
         if (![...event.dataTransfer.types].includes('Files')) return
         event.preventDefault()
@@ -42,102 +42,79 @@ export function Landing({
         void filesFromDataTransfer(event.dataTransfer).then(onFiles)
       }}
     >
-      <div className="hero-copy">
-        <p className="eyebrow">A screenshot biography</p>
-        <h1>
-          Discover
-          <br />
-          your <em>lore</em>.
-        </h1>
-        <p className="dek">
-          Your screenshots are a diary you didn’t agree to write. Guess the themes. Then meet what you actually kept.
-        </p>
-        {saved && (
-          <div className="saved-banner">
-            <p>A reading is saved on this device.</p>
-            <div className="row">
-              <Button size="sm" variant="paper" onClick={onOpenSaved}>
-                Open it
-              </Button>
-              <Button size="sm" variant="quiet" onClick={onForgetSaved}>
-                Forget it
-              </Button>
-            </div>
+      <section className="win setup">
+        <TitleBar title="LORE SETUP" />
+        <div className="win-body">
+          <p className="kicker">STEP 1 OF 2 · ADMIT THE FOLDER</p>
+          <h1 className="pixel-title">
+            This installer has opinions.
+            <span className="cursor" aria-hidden="true" />
+          </h1>
+          <p className="body">Guess three themes. Then it opens the pictures and tells you what you actually kept.</p>
+          <div className="install-bar is-demo" role="img" aria-label="Waiting for a folder">
+            <span>
+              <i />
+            </span>
           </div>
-        )}
-        <div className="actions">
-          <label className="file-btn">
-            <span>Use my screenshots</span>
-            <input
-              type="file"
-              accept={ACCEPT}
-              multiple
-              onChange={(event) => {
-                const list = event.target.files
-                if (list && list.length > 0) onFiles([...list])
-                event.target.value = ''
-              }}
-            />
-          </label>
-          <Button variant="ghost" size="lg" onClick={onSample}>
-            Try the sample set
-          </Button>
-          <label className="folder-btn">
-            <span>or choose a folder</span>
-            <input
-              type="file"
-              multiple
-              ref={(node) => {
-                if (node) node.setAttribute('webkitdirectory', '')
-              }}
-              onChange={(event) => {
-                const list = event.target.files
-                if (list && list.length > 0) onFiles([...list])
-                event.target.value = ''
-              }}
-            />
-          </label>
+          <p className="status-line">Asking nicely before opening the folder…</p>
+          {saved && (
+            <div className="saved-row">
+              <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenSaved}>
+                Open last file
+              </button>
+              <button type="button" className="btn btn-quiet btn-sm" onClick={onForgetSaved}>
+                Delete
+              </button>
+            </div>
+          )}
+          <div className="roll-actions">
+            <button type="button" className="roll-sample" onClick={onSample}>
+              Load sample
+            </button>
+            <label className="roll-primary">
+              <span>My screenshots</span>
+              <input
+                type="file"
+                accept={ACCEPT}
+                multiple
+                onChange={(event) => {
+                  const list = event.target.files
+                  if (list && list.length > 0) onFiles([...list])
+                  event.target.value = ''
+                }}
+              />
+            </label>
+            <label className="roll-folder">
+              <span>or a folder</span>
+              <input
+                type="file"
+                multiple
+                ref={(node) => {
+                  if (node) node.setAttribute('webkitdirectory', '')
+                }}
+                onChange={(event) => {
+                  const list = event.target.files
+                  if (list && list.length > 0) onFiles([...list])
+                  event.target.value = ''
+                }}
+              />
+            </label>
+          </div>
+          <ul className="facts">
+            <li>0 files leave this machine</li>
+            <li>Sensitive shots are skipped</li>
+            <li>500, then the wizard stops</li>
+          </ul>
+          <p className="fine">Sample disk: Jules Navarro, fictional, Portland.</p>
+          <details className="dates">
+            <summary>About dates</summary>
+            <p>
+              Photo time, then filename, then the file date, which we flag. iPhones sometimes strip the original time on
+              the way out of Photos.
+            </p>
+          </details>
         </div>
-        <p className="sample-note">Jules Navarro · fictional · Portland. One year, too many open tabs.</p>
-        <ul className="promises">
-          <li>Nothing is uploaded</li>
-          <li>Sensitive shots are dropped before the story</li>
-          <li>Up to 500 a reading</li>
-        </ul>
-        <details className="fine-print">
-          <summary>About dates</summary>
-          <p>
-            Lore reads the photo’s original time, then the date in the filename, then the file date. That last one is
-            marked as less certain. On iPhone, the Photos picker sometimes strips the original time — worth knowing if
-            every date says today.
-          </p>
-        </details>
-        <div className="seal" aria-hidden="true">
-          <strong>0</strong>
-          <span>uploads</span>
-        </div>
-      </div>
-      <div className="phones" aria-hidden="true">
-        <div className="phone phone-a">
-          <i />
-          <b />
-          <b />
-          <b className="short" />
-        </div>
-        <div className="phone phone-b">
-          <i />
-          <b />
-          <b className="short" />
-          <b />
-        </div>
-        <div className="phone phone-c">
-          <i />
-          <b />
-          <b />
-          <b className="short" />
-        </div>
-        <p>A year, in pictures you forgot you kept.</p>
-      </div>
+      </section>
       {dragging && <div className="drop-veil">Drop the camera roll</div>}
     </div>
   )

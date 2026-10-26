@@ -1,37 +1,47 @@
+import { TitleBar } from './Window.tsx'
+
 export function StatusCard({
   eyebrow,
   title,
   detail,
-  done,
-  total,
+  done = 0,
+  total = 0,
+  indeterminate = false,
 }: {
   eyebrow: string
   title: string
   detail?: string
-  done: number
-  total: number
+  done?: number
+  total?: number
+  indeterminate?: boolean
 }) {
-  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0
+  const pct = indeterminate ? 36 : total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0
+  const moving = indeterminate || (pct > 0 && pct < 100)
   return (
-    <section className="status-card" aria-live="polite">
-      <p className="eyebrow">{eyebrow}</p>
-      <h2>{title}</h2>
-      {detail && <p>{detail}</p>}
-      <div
-        className="meter"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={total || 1}
-        aria-valuenow={Math.min(done, total || 1)}
-        aria-label={title}
-      >
-        <span style={{ width: `${pct}%` }} />
-      </div>
-      {total > 0 && (
+    <section className="win status-card" aria-live="polite" aria-busy={indeterminate || pct < 100}>
+      <TitleBar title={eyebrow} />
+      <div className="win-body">
+        <h2 className="pixel-title">
+          {title}
+          <span className="cursor" aria-hidden="true" />
+        </h2>
+        {detail && <p className="body">{detail}</p>}
+        <div
+          className={indeterminate ? 'install-bar is-indet' : moving ? 'install-bar is-live' : 'install-bar'}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={indeterminate ? undefined : total || 1}
+          aria-valuenow={indeterminate ? undefined : Math.min(done, total || 1)}
+          aria-label={title}
+        >
+          <span style={{ width: `${pct}%` }}>
+            <i />
+          </span>
+        </div>
         <p className="meter-count">
-          {Math.min(done, total)} of {total}
+          {indeterminate ? 'Still working…' : total > 0 ? `${Math.min(done, total)} of ${total}` : 'Starting…'}
         </p>
-      )}
+      </div>
     </section>
   )
 }

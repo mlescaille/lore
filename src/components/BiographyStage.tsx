@@ -4,6 +4,7 @@ import type { ScoreResult } from '../pipeline/scoring.ts'
 import { colorForTheme, formatRange } from '../lib/format.ts'
 import type { LoreResult } from '../types.ts'
 import { CardFace, type CardModel } from './CardFace.tsx'
+import { TitleBar } from './Window.tsx'
 import { Button } from './ui/button.tsx'
 
 function modelFor(result: LoreResult, score: ScoreResult, size: 'square' | 'story'): CardModel {
@@ -83,11 +84,13 @@ export function BiographyStage({ result, score }: { result: LoreResult; score: S
   }
 
   return (
-    <section className="card-stage">
+    <section className="win card-stage">
+      <TitleBar title="CARD.EXE" />
+      <div className="win-body">
       <div className="timeline-head">
         <div>
-          <p className="eyebrow">Your card</p>
-          <h2>Share the lore, not the screenshots.</h2>
+          <p className="kicker">YOUR CARD</p>
+          <h2 className="pixel-title">Share the lore, not the screenshots.</h2>
         </div>
         <div className="segmented" role="group" aria-label="Card size">
           <button type="button" className={size === 'square' ? 'is-on' : ''} onClick={() => setSize('square')}>
@@ -170,6 +173,7 @@ export function BiographyStage({ result, score }: { result: LoreResult; score: S
       </div>
       {notice && <p className="note">{notice}</p>}
       <p className="caption-preview">{caption}</p>
+      </div>
     </section>
   )
 }

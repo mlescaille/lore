@@ -4,5 +4,5 @@ export const APP_URL = 'https://example.com/lore'
 
 export const MAX_SHOTS = 500
 
-export const THEME_COLORS = ['#ef5b3c', '#e6b15a', '#7f9a78', '#7ea1c4', '#d48ab0', '#c4b4a0']
-export const VIBES_COLOR = '#8d847a'
+export const THEME_COLORS = ['#ff4fa3', '#ffe14a', '#67f2e4', '#c084fc', '#ff8a3d', '#7dffb3']
+export const VIBES_COLOR = '#b9a6d6'

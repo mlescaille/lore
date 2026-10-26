@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { MAX_SHOTS } from '../config.ts'
 import { utcDay } from '../lib/format.ts'
 import type { PreparedFile } from '../pipeline/ingest.ts'
+import { TitleBar } from './Window.tsx'
 import { Button } from './ui/button.tsx'
 import { Input } from './ui/input.tsx'
 
@@ -33,42 +34,45 @@ export function RangeStep({
   const lowConfidence = files.filter((file) => file.timestampSource === 'lastModified').length
 
   return (
-    <section className="range-step">
-      <p className="eyebrow">A little too much lore</p>
-      <h1>Pick a stretch of up to {MAX_SHOTS}.</h1>
-      <p className="dek">
-        This roll has {files.length} screenshots after duplicates. One reading stops at {MAX_SHOTS}. The dates below
-        start on the most recent {MAX_SHOTS}.
-      </p>
-      {note && <p className="note">{note}</p>}
-      <div className="date-row">
-        <label>
-          From
-          <Input type="date" value={start} min={bounds.min} max={bounds.max} onChange={(event) => setStart(event.target.value)} />
-        </label>
-        <label>
-          To
-          <Input type="date" value={end} min={bounds.min} max={bounds.max} onChange={(event) => setEnd(event.target.value)} />
-        </label>
-      </div>
-      <p className="count-line">
-        {selected.length === 0
-          ? 'Nothing in these dates.'
-          : `${selected.length} screenshot${selected.length === 1 ? '' : 's'} in this stretch.`}
-      </p>
-      {lowConfidence > files.length / 2 && (
-        <p className="note">
-          A lot of these dates came from the file, not the photo. On iPhone, the Photos picker sometimes drops the
-          original time.
+    <section className="win range-step">
+      <TitleBar title="PICK A STRETCH" />
+      <div className="win-body">
+        <p className="kicker">A LITTLE TOO MUCH LORE</p>
+        <h1 className="pixel-title">Pick a stretch of up to {MAX_SHOTS}.</h1>
+        <p className="body">
+          This roll has {files.length} screenshots after duplicates. One reading stops at {MAX_SHOTS}. The dates below
+          start on the most recent {MAX_SHOTS}.
         </p>
-      )}
-      <div className="actions">
-        <Button size="lg" disabled={selected.length === 0 || selected.length > MAX_SHOTS} onClick={() => onConfirm(selected)}>
-          Read this stretch
-        </Button>
-        <Button size="lg" variant="ghost" onClick={() => onConfirm(recent)}>
-          Read the most recent {MAX_SHOTS}
-        </Button>
+        {note && <p className="banner">{note}</p>}
+        <div className="date-row">
+          <label>
+            From
+            <Input type="date" value={start} min={bounds.min} max={bounds.max} onChange={(event) => setStart(event.target.value)} />
+          </label>
+          <label>
+            To
+            <Input type="date" value={end} min={bounds.min} max={bounds.max} onChange={(event) => setEnd(event.target.value)} />
+          </label>
+        </div>
+        <p className="count-line">
+          {selected.length === 0
+            ? 'Nothing in these dates.'
+            : `${selected.length} screenshot${selected.length === 1 ? '' : 's'} in this stretch.`}
+        </p>
+        {lowConfidence > files.length / 2 && (
+          <p className="note">
+            A lot of these dates came from the file, not the photo. On iPhone, the Photos picker sometimes drops the
+            original time.
+          </p>
+        )}
+        <div className="actions">
+          <Button size="lg" disabled={selected.length === 0 || selected.length > MAX_SHOTS} onClick={() => onConfirm(selected)}>
+            Read this stretch
+          </Button>
+          <Button size="lg" variant="ghost" onClick={() => onConfirm(recent)}>
+            Read the most recent {MAX_SHOTS}
+          </Button>
+        </div>
       </div>
     </section>
   )

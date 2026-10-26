@@ -71,7 +71,7 @@ export async function cardToBlob(node: HTMLElement): Promise<Blob> {
   const dataUrl = await toPng(node, {
     cacheBust: true,
     pixelRatio: 1,
-    backgroundColor: '#f3eee4',
+    backgroundColor: '#24143f',
     width: node.offsetWidth,
     height: node.offsetHeight,
   })

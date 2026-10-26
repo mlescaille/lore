@@ -35,15 +35,7 @@ npm run dev
 
 Open [http://127.0.0.1:4317/lore/](http://127.0.0.1:4317/lore/). The app is built to live under `/lore`.
 
-Visual directions are preview-only. The current design stays the default until one is chosen:
-
-- [Scrapbook](http://127.0.0.1:4317/lore/?look=scrapbook) — taped pictures, handwriting, paper
-- [Tabloid](http://127.0.0.1:4317/lore/?look=tabloid) — a front page, loud type, a correction
-- [Memoir](http://127.0.0.1:4317/lore/?look=memoir) — a paperback jacket, quiet and a little wry
-- [Receipt](http://127.0.0.1:4317/lore/?look=receipt) — a thermal receipt of the year
-- [Poster](http://127.0.0.1:4317/lore/?look=poster) — a year-in-review you could post
-- [Archive](http://127.0.0.1:4317/lore/?look=archive) — a museum label for your camera roll
-- [Retro](http://127.0.0.1:4317/lore/?look=retro) — a chunky installer and a trading card
+The interface is one original retro installer: pixel chrome for windows and buttons, Atkinson Hyperlegible for anything you read or type, beveled panels, and a trading-card biography. There is no theme switch.
 
 ```bash
 npm test          # exclusion, timestamps, chaptering, scoring, sample coherence
@@ -62,7 +54,7 @@ The fictional roll is Jules Navarro (Portland, March 2025–February 2026): reci
 npm run sample:render
 ```
 
-That writes `public/sample/<id>.png`. “Try the sample set” then runs the real theme, chapter, score, and biography pipeline on those lines. It skips optical character recognition so the demo stays under a minute. Your own files still go through OCR.
+That writes `public/sample/<id>.png`. “Load sample” then runs the real theme, chapter, score, and biography pipeline on those lines. It skips optical character recognition so the demo stays under a minute. Your own files still go through OCR.
 
 `src/pipeline/sample.test.ts` checks that the sample stays coherent (exclusion counts, theme purity, the epithet, no screenshot text in the card copy). Update that test if you change the persona on purpose.
 

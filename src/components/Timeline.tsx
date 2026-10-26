@@ -1,5 +1,6 @@
 import { colorForTheme, formatDay } from '../lib/format.ts'
 import type { LoreResult, ShotRecord } from '../types.ts'
+import { TitleBar } from './Window.tsx'
 
 export function Timeline({
   result,
@@ -21,68 +22,71 @@ export function Timeline({
   const ticks = thinTicks(monthTicks(records[0].timestamp, records[records.length - 1].timestamp, min, span))
 
   return (
-    <section className="timeline">
-      <div className="timeline-head">
-        <div>
-          <p className="eyebrow">What you actually captured</p>
-          <h2>One row per theme. One dot per screenshot.</h2>
+    <section className="win timeline">
+      <TitleBar title="TIMELINE.EXE" />
+      <div className="win-body">
+        <div className="timeline-head">
+          <div>
+            <p className="kicker">WHAT YOU ACTUALLY CAPTURED</p>
+            <h2 className="pixel-title">One row per theme. One dot per screenshot.</h2>
+          </div>
+          <label className="switch">
+            <input type="checkbox" checked={showImages} onChange={(event) => onShowImages(event.target.checked)} />
+            <span>Show screenshots</span>
+          </label>
         </div>
-        <label className="switch">
-          <input type="checkbox" checked={showImages} onChange={(event) => onShowImages(event.target.checked)} />
-          <span>Show screenshots</span>
-        </label>
-      </div>
-      <div className="plot">
-        <div className="ticks" aria-hidden="true">
-          {ticks.map((tick) => (
-            <span key={tick.label + tick.at} style={{ left: `${tick.at * 100}%` }}>
-              {tick.label}
-            </span>
-          ))}
+        <div className="plot">
+          <div className="ticks" aria-hidden="true">
+            {ticks.map((tick) => (
+              <span key={tick.label + tick.at} style={{ left: `${tick.at * 100}%` }}>
+                {tick.label}
+              </span>
+            ))}
+          </div>
+          {result.themes.map((theme) => {
+            const dots = records.filter((record) => record.themeId === theme.id)
+            const color = colorForTheme(theme.id, result.themes)
+            const share = records.length ? Math.round((theme.count / records.length) * 100) : 0
+            return (
+              <div className="theme-row" key={theme.id}>
+                <div className="theme-name">
+                  <strong>{theme.label}</strong>
+                  <em>
+                    {theme.count} · {share}%
+                  </em>
+                </div>
+                <div className="lane">
+                  {dots.map((record, index) => {
+                    const at = ((new Date(record.timestamp).getTime() - min) / span) * 100
+                    const lowConfidence = record.timestampSource === 'lastModified'
+                    return (
+                      <button
+                        key={record.id}
+                        type="button"
+                        className={lowConfidence ? 'dot is-low' : 'dot'}
+                        style={{
+                          left: `${records.length === 1 ? 50 : at}%`,
+                          background: lowConfidence ? 'transparent' : color,
+                          color,
+                          transform: `translate(-50%, ${((index % 3) - 1) * 7}px)`,
+                        }}
+                        aria-label={`${theme.label}, ${formatDay(record.timestamp)}${lowConfidence ? ', file date' : ''}`}
+                        onClick={() => onSelect(record)}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
-        {result.themes.map((theme) => {
-          const dots = records.filter((record) => record.themeId === theme.id)
-          const color = colorForTheme(theme.id, result.themes)
-          const share = records.length ? Math.round((theme.count / records.length) * 100) : 0
-          return (
-            <div className="theme-row" key={theme.id}>
-              <div className="theme-name">
-                <strong>{theme.label}</strong>
-                <em>
-                  {theme.count} · {share}%
-                </em>
-              </div>
-              <div className="lane">
-                {dots.map((record, index) => {
-                  const at = ((new Date(record.timestamp).getTime() - min) / span) * 100
-                  const lowConfidence = record.timestampSource === 'lastModified'
-                  return (
-                    <button
-                      key={record.id}
-                      type="button"
-                      className={lowConfidence ? 'dot is-low' : 'dot'}
-                      style={{
-                        left: `${records.length === 1 ? 50 : at}%`,
-                        background: lowConfidence ? 'transparent' : color,
-                        color,
-                        transform: `translate(-50%, ${((index % 3) - 1) * 7}px)`,
-                      }}
-                      aria-label={`${theme.label}, ${formatDay(record.timestamp)}${lowConfidence ? ', file date' : ''}`}
-                      onClick={() => onSelect(record)}
-                    />
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
+        {low && (
+          <p className="note">
+            Rings instead of filled dots are dates from the file, not the photo. iPhones sometimes drop the original time
+            on the way out of Photos.
+          </p>
+        )}
       </div>
-      {low && (
-        <p className="note">
-          Rings instead of filled dots are dates from the file, not the photo. iPhones sometimes drop the original time
-          on the way out of Photos.
-        </p>
-      )}
     </section>
   )
 }
