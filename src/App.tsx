@@ -3,7 +3,11 @@ import { Footer } from './components/Footer.tsx'
 import { GuessStep } from './components/GuessStep.tsx'
 import { Landing } from './components/Landing.tsx'
 import { AltBar, LookNav } from './components/looks/AltBar.tsx'
+import { ArchiveLanding } from './components/looks/ArchiveLanding.tsx'
 import { MemoirLanding } from './components/looks/MemoirLanding.tsx'
+import { PosterLanding } from './components/looks/PosterLanding.tsx'
+import { ReceiptLanding } from './components/looks/ReceiptLanding.tsx'
+import { RetroLanding } from './components/looks/RetroLanding.tsx'
 import { ScrapbookLanding } from './components/looks/ScrapbookLanding.tsx'
 import { TabloidLanding } from './components/looks/TabloidLanding.tsx'
 import { RangeStep } from './components/RangeStep.tsx'
@@ -54,6 +58,10 @@ export default function App() {
         {phase.type === 'landing' && look === 'scrapbook' && <ScrapbookLanding {...landingProps} />}
         {phase.type === 'landing' && look === 'tabloid' && <TabloidLanding {...landingProps} />}
         {phase.type === 'landing' && look === 'memoir' && <MemoirLanding {...landingProps} />}
+        {phase.type === 'landing' && look === 'receipt' && <ReceiptLanding {...landingProps} />}
+        {phase.type === 'landing' && look === 'poster' && <PosterLanding {...landingProps} />}
+        {phase.type === 'landing' && look === 'archive' && <ArchiveLanding {...landingProps} />}
+        {phase.type === 'landing' && look === 'retro' && <RetroLanding {...landingProps} />}
         {phase.type === 'preparing' && (
           <StatusCard eyebrow="On this device" title={phase.progress.label} detail="Duplicates come out. Dates get read. Nothing is uploaded." done={phase.progress.done} total={phase.progress.total} />
         )}

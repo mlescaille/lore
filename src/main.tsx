@@ -14,6 +14,10 @@ async function boot() {
     if (look === 'scrapbook') await import('./looks/scrapbook.css')
     if (look === 'tabloid') await import('./looks/tabloid.css')
     if (look === 'memoir') await import('./looks/memoir.css')
+    if (look === 'receipt') await import('./looks/receipt.css')
+    if (look === 'poster') await import('./looks/poster.css')
+    if (look === 'archive') await import('./looks/archive.css')
+    if (look === 'retro') await import('./looks/retro.css')
     document.documentElement.dataset.look = look
   }
   createRoot(document.getElementById('root')!).render(

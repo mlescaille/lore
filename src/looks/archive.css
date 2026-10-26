@@ -1,0 +1,157 @@
+@import "@fontsource/spectral/latin-500.css";
+@import "@fontsource/spectral/latin-500-italic.css";
+@import "@fontsource/spectral/latin-600.css";
+
+html[data-look="archive"] { color-scheme: light; }
+html[data-look="archive"] body {
+  background: #cfc6b8;
+  color: #221e1a;
+  font-family: Spectral, Georgia, serif;
+}
+html[data-look="archive"] :focus-visible { outline-color: #8d2f2c; }
+html[data-look="archive"] ::selection { background: #8d2f2c; color: #f4f0e6; }
+
+.alt-bar-archive { background: #cfc6b8; border-bottom: 1px solid #221e1a; }
+.alt-bar-archive .alt-mark {
+  margin: 0;
+  font-variant: small-caps;
+  letter-spacing: 0.16em;
+  font-size: 1rem;
+}
+
+.ar {
+  display: grid;
+  gap: 28px;
+  padding: 22px 0 40px;
+  align-items: stretch;
+}
+@media (min-width: 960px) {
+  .ar { grid-template-columns: 1.15fr 0.85fr; min-height: calc(100dvh - 160px); gap: 40px; }
+}
+.ar-acc {
+  margin: 0;
+  color: #8d2f2c;
+  font-variant: small-caps;
+  letter-spacing: 0.16em;
+  font-size: 0.95rem;
+}
+.ar-title {
+  margin: 8px 0 0;
+  font-family: Spectral, Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(3.4rem, 7vw, 5.6rem);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  color: #221e1a;
+}
+.ar-dek { margin: 12px 0 0; max-width: 38rem; font-size: 1.25rem; line-height: 1.4; }
+.ar-who { margin: 0; font-style: italic; color: #4e463c; }
+.ar .roll-actions { flex-direction: column; align-items: flex-start; }
+.ar .roll-sample { order: -1; }
+.ar .roll-sample,
+.ar .roll-primary,
+.ar .roll-folder {
+  border-radius: 0;
+  font-family: Spectral, Georgia, serif;
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+  font-size: 1.2rem;
+}
+.ar .roll-sample { background: #8d2f2c; color: #f4f0e6; border: 0; padding: 0 18px; }
+.ar .roll-primary { background: transparent; color: #221e1a; border: 0; border-bottom: 1px solid #221e1a; padding: 0; }
+.ar .roll-folder { color: #221e1a; border: 0; padding: 0; }
+.ar-facts { margin: 8px 0 0; display: grid; gap: 10px; }
+.ar-facts div { display: grid; grid-template-columns: 7rem 1fr; gap: 10px; border-top: 1px solid rgba(34, 30, 26, 0.35); padding-top: 8px; }
+.ar-facts dt { margin: 0; font-variant: small-caps; letter-spacing: 0.12em; color: #8d2f2c; }
+.ar-facts dd { margin: 0; }
+.ar-saved { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; }
+.ar-saved p { margin: 0; font-style: italic; }
+.ar-saved button {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #221e1a;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.05rem;
+}
+.ar-case {
+  border: 1px solid #221e1a;
+  background: #e7e1d6;
+  min-height: 320px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ar-case p { margin: 0; font-variant: small-caps; letter-spacing: 0.14em; font-size: 0.92rem; }
+.ar-void {
+  flex: 1;
+  border: 1px solid rgba(34, 30, 26, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 180px;
+  color: #8d2f2c;
+  font-style: italic;
+  font-size: 1.6rem;
+}
+
+html[data-look="archive"] .look-drop {
+  background: rgba(244, 240, 230, 0.94);
+  border: 1px solid #221e1a;
+  color: #221e1a;
+  font-family: Spectral, Georgia, serif;
+  font-style: italic;
+}
+html[data-look="archive"] .look-dates,
+html[data-look="archive"] .site-footer { color: #4e463c; }
+html[data-look="archive"] .look-dates summary { cursor: pointer; font-variant: small-caps; letter-spacing: 0.1em; }
+html[data-look="archive"] h1,
+html[data-look="archive"] h2,
+html[data-look="archive"] h3 {
+  font-family: Spectral, Georgia, serif;
+  font-weight: 500;
+  color: #221e1a;
+}
+html[data-look="archive"] .dek,
+html[data-look="archive"] .note,
+html[data-look="archive"] .fine,
+html[data-look="archive"] .exclusion { color: #3c352d; }
+html[data-look="archive"] .field { color: #221e1a; border-bottom-color: rgba(34, 30, 26, 0.4); }
+html[data-look="archive"] .guess-field .field { font-family: Spectral, Georgia, serif; font-style: italic; font-size: 2rem; }
+html[data-look="archive"] .status-card,
+html[data-look="archive"] .score-panel,
+html[data-look="archive"] .timeline,
+html[data-look="archive"] .card-stage,
+html[data-look="archive"] .eras,
+html[data-look="archive"] .turns,
+html[data-look="archive"] .empty-lore,
+html[data-look="archive"] .error-block,
+html[data-look="archive"] .range-step {
+  background: transparent;
+  color: #221e1a;
+  border: 0;
+  border-top: 1px solid #221e1a;
+  border-radius: 0;
+}
+html[data-look="archive"] .actions button,
+html[data-look="archive"] .row button {
+  border-radius: 0;
+  background: #8d2f2c;
+  color: #f4f0e6;
+  border-color: #8d2f2c;
+}
+html[data-look="archive"] .look-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 16px;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+}
+html[data-look="archive"] .look-nav a[aria-current="page"] { color: #8d2f2c; }

@@ -1,6 +1,10 @@
 import type { CSSProperties, Ref } from 'react'
 import { currentLook } from '../looks/look.ts'
+import { ArchiveCard } from './looks/ArchiveCard.tsx'
 import { MemoirCard } from './looks/MemoirCard.tsx'
+import { PosterCard } from './looks/PosterCard.tsx'
+import { ReceiptCard } from './looks/ReceiptCard.tsx'
+import { RetroCard } from './looks/RetroCard.tsx'
 import { ScrapbookCard } from './looks/ScrapbookCard.tsx'
 import { TabloidCard } from './looks/TabloidCard.tsx'
 
@@ -38,6 +42,10 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
   if (look === 'scrapbook') return <ScrapbookCard model={model} nodeRef={nodeRef} />
   if (look === 'tabloid') return <TabloidCard model={model} nodeRef={nodeRef} />
   if (look === 'memoir') return <MemoirCard model={model} nodeRef={nodeRef} />
+  if (look === 'receipt') return <ReceiptCard model={model} nodeRef={nodeRef} />
+  if (look === 'poster') return <PosterCard model={model} nodeRef={nodeRef} />
+  if (look === 'archive') return <ArchiveCard model={model} nodeRef={nodeRef} />
+  if (look === 'retro') return <RetroCard model={model} nodeRef={nodeRef} />
   return <DeskCard model={model} nodeRef={nodeRef} />
 }
 

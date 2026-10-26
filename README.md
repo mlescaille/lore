@@ -35,11 +35,15 @@ npm run dev
 
 Open [http://127.0.0.1:4317/lore/](http://127.0.0.1:4317/lore/). The app is built to live under `/lore`.
 
-Three visual directions are preview-only. The current design stays the default until one is chosen:
+Visual directions are preview-only. The current design stays the default until one is chosen:
 
 - [Scrapbook](http://127.0.0.1:4317/lore/?look=scrapbook) — taped pictures, handwriting, paper
 - [Tabloid](http://127.0.0.1:4317/lore/?look=tabloid) — a front page, loud type, a correction
 - [Memoir](http://127.0.0.1:4317/lore/?look=memoir) — a paperback jacket, quiet and a little wry
+- [Receipt](http://127.0.0.1:4317/lore/?look=receipt) — a thermal receipt of the year
+- [Poster](http://127.0.0.1:4317/lore/?look=poster) — a year-in-review you could post
+- [Archive](http://127.0.0.1:4317/lore/?look=archive) — a museum label for your camera roll
+- [Retro](http://127.0.0.1:4317/lore/?look=retro) — a chunky installer and a trading card
 
 ```bash
 npm test          # exclusion, timestamps, chaptering, scoring, sample coherence

@@ -36,7 +36,11 @@
 }
 .sb,
 .tb,
-.mm { position: relative; }
+.mm,
+.rc,
+.po,
+.ar,
+.rt { position: relative; }
 .look-drop {
   position: absolute;
   inset: 8px;

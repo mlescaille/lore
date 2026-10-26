@@ -4,6 +4,10 @@ const MARK: Record<Exclude<Look, 'desk'>, string> = {
   scrapbook: 'on this table',
   tabloid: 'Evening edition · still free',
   memoir: 'A screenshot autobiography',
+  receipt: 'cashier: your phone',
+  poster: 'year in screenshots',
+  archive: 'gallery 1 · do not upload',
+  retro: 'lore setup',
 }
 
 export function AltBar({
@@ -35,6 +39,10 @@ export function LookNav({ look }: { look: Exclude<Look, 'desk'> }) {
     ['scrapbook', 'Scrapbook'],
     ['tabloid', 'Tabloid'],
     ['memoir', 'Memoir'],
+    ['receipt', 'Receipt'],
+    ['poster', 'Poster'],
+    ['archive', 'Archive'],
+    ['retro', 'Retro'],
   ] as const
 
   return (

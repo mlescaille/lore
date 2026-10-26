@@ -1,0 +1,150 @@
+@import "@fontsource/share-tech-mono/latin-400.css";
+
+html[data-look="receipt"] { color-scheme: dark; }
+html[data-look="receipt"] body {
+  background: #141414;
+  color: #f7f6f2;
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+}
+html[data-look="receipt"] :focus-visible { outline-color: #f7f6f2; }
+html[data-look="receipt"] ::selection { background: #1c1c1c; color: #f7f6f2; }
+
+.alt-bar-receipt { background: #141414; border-bottom: 1px dashed #f7f6f2; }
+.alt-bar-receipt .alt-mark {
+  margin: 0;
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rc { display: flex; justify-content: center; padding: 28px 0 48px; }
+.rc-paper {
+  width: min(440px, 100%);
+  background-color: #f7f6f2;
+  background-image: radial-gradient(circle at 12px 0, transparent 8px, #f7f6f2 8.5px);
+  background-size: 24px 14px;
+  background-repeat: repeat-x;
+  color: #1c1c1c;
+  padding: 28px 22px 8px;
+  box-shadow: 8px 8px 0 #000;
+}
+.rc-store {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 2.4rem;
+  letter-spacing: 0.22em;
+}
+.rc-meta, .rc-cashier, .rc-thanks {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+}
+.rc-thanks { font-size: 0.95rem; margin-top: 14px; }
+.rc-rule { border-top: 2px dashed #1c1c1c; margin: 14px 0; }
+.rc-title {
+  margin: 0;
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-weight: 400;
+  font-size: clamp(2.4rem, 8vw, 3.1rem);
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #1c1c1c;
+}
+.rc-dek { margin: 10px 0 0; font-size: 0.95rem; line-height: 1.45; }
+.rc .roll-actions { flex-direction: column; align-items: stretch; }
+.rc .roll-sample { order: -1; }
+.rc .roll-primary,
+.rc .roll-sample,
+.rc .roll-folder {
+  border-radius: 0;
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  justify-content: center;
+}
+.rc .roll-sample { background: #1c1c1c; color: #f7f6f2; border: 0; }
+.rc .roll-primary { background: transparent; color: #1c1c1c; border: 2px solid #1c1c1c; }
+.rc .roll-folder { color: #1c1c1c; border: 0; justify-content: flex-start; padding-left: 0; }
+.rc-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rc-lines li { display: flex; justify-content: space-between; gap: 12px; font-size: 0.92rem; }
+.rc-saved { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.rc-saved p { margin: 0; font-size: 0.82rem; }
+.rc-saved button {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #1c1c1c;
+  font-family: "Share Tech Mono", monospace;
+  cursor: pointer;
+  padding: 0;
+}
+html[data-look="receipt"] .rc-paper,
+html[data-look="receipt"] .rc-paper h1 { color: #1c1c1c; }
+html[data-look="receipt"] .look-drop {
+  background: rgba(20, 20, 20, 0.88);
+  color: #f7f6f2;
+  border: 2px dashed #f7f6f2;
+  font-family: "Share Tech Mono", monospace;
+  text-transform: uppercase;
+}
+html[data-look="receipt"] .look-dates { color: #333; font-size: 0.78rem; }
+html[data-look="receipt"] .look-dates summary { cursor: pointer; }
+html[data-look="receipt"] .site-footer { color: #c8c2b8; }
+html[data-look="receipt"] h1,
+html[data-look="receipt"] h2,
+html[data-look="receipt"] h3 {
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+html[data-look="receipt"] .status-card,
+html[data-look="receipt"] .score-panel,
+html[data-look="receipt"] .timeline,
+html[data-look="receipt"] .card-stage,
+html[data-look="receipt"] .eras,
+html[data-look="receipt"] .turns,
+html[data-look="receipt"] .empty-lore,
+html[data-look="receipt"] .error-block,
+html[data-look="receipt"] .range-step,
+html[data-look="receipt"] .guess-form {
+  background: #f7f6f2;
+  color: #1c1c1c;
+  border: 0;
+  border-radius: 0;
+  box-shadow: 8px 8px 0 #000;
+}
+html[data-look="receipt"] .status-card h2,
+html[data-look="receipt"] .score-panel h2,
+html[data-look="receipt"] .timeline h2,
+html[data-look="receipt"] .guess-form h1,
+html[data-look="receipt"] .dek,
+html[data-look="receipt"] .note,
+html[data-look="receipt"] .fine,
+html[data-look="receipt"] .exclusion { color: #1c1c1c; }
+html[data-look="receipt"] .field {
+  color: #1c1c1c;
+  border-bottom-color: #1c1c1c;
+  font-family: "Share Tech Mono", monospace;
+}
+html[data-look="receipt"] .guess-field .field { font-family: "Share Tech Mono", monospace; font-style: normal; font-size: 1.4rem; text-transform: uppercase; }
+html[data-look="receipt"] .actions button,
+html[data-look="receipt"] .row button {
+  border-radius: 0;
+  background: #1c1c1c;
+  color: #f7f6f2;
+  font-family: "Share Tech Mono", monospace;
+  text-transform: uppercase;
+}
+html[data-look="receipt"] .look-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 18px;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+html[data-look="receipt"] .look-nav a[aria-current="page"] { border-bottom: 1px solid #f7f6f2; }
