@@ -16,7 +16,6 @@
   --light: #fffdf8;
   --body: "Atkinson Hyperlegible", "Segoe UI", sans-serif;
   --pixel: Silkscreen, ui-monospace, monospace;
-  --display: Bungee, Impact, sans-serif;
   font-family: var(--body);
   background: var(--desk);
   color: var(--butter);
@@ -257,11 +256,9 @@ main.shell:focus { outline: none; }
 .install-bar > span i {
   display: block;
   height: 100%;
-  width: 220%;
-  background: repeating-linear-gradient(90deg, var(--aqua) 0 10px, var(--grape) 10px 16px);
+  width: 100%;
+  background: var(--aqua);
 }
-.install-bar.is-live > span i,
-.install-bar.is-demo > span i,
 .install-bar.is-indet > span i {
   animation: stripes 0.7s linear infinite;
 }
@@ -335,9 +332,10 @@ main.shell:focus { outline: none; }
   min-height: 48px;
   padding: 10px 14px;
   text-align: center;
-  font-family: var(--pixel);
-  font-size: 16px;
-  line-height: 1.4;
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.3;
   cursor: pointer;
   border-top: 3px solid var(--light);
   border-left: 3px solid var(--light);
@@ -366,9 +364,10 @@ main.shell:focus { outline: none; }
   gap: 8px;
   min-height: 48px;
   padding: 10px 16px;
-  font-family: var(--pixel);
-  font-size: 16px;
-  line-height: 1.4;
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.3;
   text-align: center;
   cursor: pointer;
   border-top: 3px solid var(--light);
@@ -447,8 +446,9 @@ input[type="date"].field { color-scheme: light; }
   place-items: center;
   background: var(--grape);
   color: var(--butter);
-  font-family: var(--pixel);
-  font-size: 16px;
+  font-family: var(--body);
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 .leave-out summary {
   cursor: pointer;
@@ -749,6 +749,69 @@ input[type="date"].field { color-scheme: light; }
   border: 3px solid var(--ink);
 }
 .text-close { align-self: flex-start; }
+
+.lore-title {
+  margin: 4px 0 0;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: clamp(1.75rem, 2vw + 1rem, 2.5rem);
+  line-height: 1.2;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.lore-themes {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lore-themes li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 3px solid var(--grape);
+}
+.lore-themes h2 {
+  margin: 0;
+  font-family: var(--body);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--ink);
+}
+.lore-themes .count {
+  margin: 0;
+  font-family: var(--body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.lore-themes .body { font-size: 1.0625rem; }
+.thumbs { display: flex; gap: 8px; }
+.thumbs:empty { display: none; }
+.thumbs img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  background: var(--ink);
+  border: 2px solid var(--ink);
+}
+.score-list {
+  margin: 4px 0 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.pixel-title { text-wrap: balance; }
 
 @media (max-width: 640px) {
   .ticks { display: none; }

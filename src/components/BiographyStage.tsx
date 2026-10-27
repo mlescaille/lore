@@ -1,44 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
-import { buildCaption, cardToBlob, downloadBlob, linkedInIntent, shareCard, xIntent } from '../share/export.ts'
-import type { ScoreResult } from '../pipeline/scoring.ts'
-import { colorForTheme, formatRange } from '../lib/format.ts'
+import { suggestionFor } from '../pipeline/biography.ts'
+import { buildCaption, cardToBlob, downloadBlob, shareCard } from '../share/export.ts'
+import { formatRange } from '../lib/format.ts'
 import type { LoreResult } from '../types.ts'
 import { CardFace, type CardModel } from './CardFace.tsx'
 import { TitleBar } from './Window.tsx'
 import { Button } from './ui/button.tsx'
 
-function modelFor(result: LoreResult, score: ScoreResult, size: 'square' | 'story'): CardModel {
-  const denom = Math.max(result.records.length, 1)
+function modelFor(result: LoreResult, size: 'square' | 'story'): CardModel {
   const top = [...result.themes].sort((a, b) => b.count - a.count).slice(0, 3)
   const start = result.records[0]?.timestamp ?? result.chapters[0]?.start
   const end = result.records[result.records.length - 1]?.timestamp ?? result.chapters[result.chapters.length - 1]?.end
-  const spans = result.chapters.map((chapter) => Math.max(1, new Date(chapter.end).getTime() - new Date(chapter.start).getTime()))
-  const spanSum = spans.reduce((sum, value) => sum + value, 0) || 1
   return {
     epithet: result.biography.epithet,
-    closingLine: result.biography.closingLine,
     rangeLabel: start && end ? formatRange(start, end) : 'This reading',
     total: result.records.length,
     themes: top.map((theme) => ({
       label: theme.label,
-      share: theme.count / denom,
-      color: colorForTheme(theme.id, result.themes),
-    })),
-    guesses: score.matches.map((match) => ({
-      guess: match.guess,
-      matchLabel: match.themeLabel,
-      matched: match.matched,
-    })),
-    eras: result.chapters.map((chapter, index) => ({
-      label: chapter.title,
-      share: (spans[index] ?? 1) / spanSum,
-      color: colorForTheme(chapter.themeId, result.themes),
+      count: theme.count,
+      line: suggestionFor(theme.id, theme.label),
     })),
     size,
   }
 }
 
-export function BiographyStage({ result, score }: { result: LoreResult; score: ScoreResult }) {
+export function BiographyStage({ result }: { result: LoreResult }) {
   const [size, setSize] = useState<'square' | 'story'>('square')
   const [width, setWidth] = useState(640)
   const [busy, setBusy] = useState(false)
@@ -46,7 +32,7 @@ export function BiographyStage({ result, score }: { result: LoreResult; score: S
   const [canShare, setCanShare] = useState(false)
   const frameRef = useRef<HTMLDivElement>(null)
   const exportRef = useRef<HTMLDivElement>(null)
-  const model = modelFor(result, score, size)
+  const model = modelFor(result, size)
   const scale = Math.min(1, width / 1080)
   const height = (size === 'story' ? 1920 : 1080) * scale
   const caption = buildCaption(result.biography.epithet)
@@ -85,14 +71,11 @@ export function BiographyStage({ result, score }: { result: LoreResult; score: S
 
   return (
     <section className="win card-stage">
-      <TitleBar title="CARD.EXE" />
+      <TitleBar title="LORE" />
       <div className="win-body">
-      <div className="timeline-head">
-        <div>
-          <p className="kicker">YOUR CARD</p>
-          <h2 className="pixel-title">Share the lore, not the screenshots.</h2>
-        </div>
-        <div className="segmented" role="group" aria-label="Card size">
+        <h2 className="pixel-title">Share it</h2>
+        <p className="body">Download a picture of your lore. It does not include your screenshots.</p>
+        <div className="segmented" role="group" aria-label="Picture shape">
           <button type="button" className={size === 'square' ? 'is-on' : ''} onClick={() => setSize('square')}>
             Square
           </button>
@@ -100,79 +83,48 @@ export function BiographyStage({ result, score }: { result: LoreResult; score: S
             Story
           </button>
         </div>
-      </div>
-      <div className="card-frame" ref={frameRef} style={{ height }}>
-        <div style={{ width: 1080, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-          <CardFace model={model} />
+        <div className="card-frame" ref={frameRef} style={{ height }}>
+          <div style={{ width: 1080, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+            <CardFace model={model} />
+          </div>
         </div>
-      </div>
-      <div className="export-host" aria-hidden="true">
-        <CardFace model={model} nodeRef={exportRef} />
-      </div>
-      <div className="actions">
-        <Button size="lg" disabled={busy} onClick={() => run(async () => downloadBlob(await png(), filename))}>
-          {busy ? 'Making the image…' : 'Download PNG'}
-        </Button>
-        {canShare && (
-          <Button
-            size="lg"
-            variant="paper"
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                const outcome = await shareCard(await png(), filename, caption)
-                if (outcome === 'downloaded') setNotice('This browser can’t share the file, so the image downloaded instead.')
-              })
-            }
-          >
-            Share
+        <div className="export-host" aria-hidden="true">
+          <CardFace model={model} nodeRef={exportRef} />
+        </div>
+        <div className="actions">
+          <Button size="lg" disabled={busy} onClick={() => run(async () => downloadBlob(await png(), filename))}>
+            {busy ? 'Making the image…' : 'Download PNG'}
           </Button>
-        )}
-        <div className="share-desktop">
+          {canShare && (
+            <Button
+              size="lg"
+              variant="paper"
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  const outcome = await shareCard(await png(), filename, caption)
+                  if (outcome === 'downloaded') setNotice('This browser saved the image instead of sharing it.')
+                })
+              }
+            >
+              Share
+            </Button>
+          )}
           <Button
             size="lg"
-            variant="ghost"
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                downloadBlob(await png(), filename)
-                window.open(xIntent(caption), '_blank', 'noopener,noreferrer')
-              })
-            }
+            variant="quiet"
+            onClick={() => {
+              void navigator.clipboard.writeText(caption).then(
+                () => setNotice('Caption copied.'),
+                () => setNotice(caption),
+              )
+            }}
           >
-            Post to X
-          </Button>
-          <Button
-            size="lg"
-            variant="ghost"
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                downloadBlob(await png(), filename)
-                await navigator.clipboard.writeText(caption).catch(() => {})
-                window.open(linkedInIntent(), '_blank', 'noopener,noreferrer')
-                setNotice('Caption copied. LinkedIn only takes the link, so paste the line if you want it. The image downloaded too.')
-              })
-            }
-          >
-            Post to LinkedIn
+            Copy caption
           </Button>
         </div>
-        <Button
-          size="lg"
-          variant="quiet"
-          onClick={() => {
-            void navigator.clipboard.writeText(caption).then(
-              () => setNotice('Caption copied.'),
-              () => setNotice(caption),
-            )
-          }}
-        >
-          Copy caption
-        </Button>
-      </div>
-      {notice && <p className="note">{notice}</p>}
-      <p className="caption-preview">{caption}</p>
+        {notice && <p className="note">{notice}</p>}
+        <p className="caption-preview">{caption}</p>
       </div>
     </section>
   )

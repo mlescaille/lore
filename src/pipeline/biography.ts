@@ -118,6 +118,27 @@ function themeText(theme: Theme | undefined): string {
   return `${theme.label} ${theme.keywords.join(' ')}`
 }
 
+const SUGGESTIONS: Record<string, string> = {
+  celebrations: 'You keep the party, so you can look at it again.',
+  friends: 'The people close to you keep showing up.',
+  people: 'You save faces, not just places.',
+  recipes: 'You save meals you mean to cook.',
+  food: 'Food is how you remember a day.',
+  travel: 'You save the trip while it is still a plan.',
+  fitness: 'You keep the workout you mean to do.',
+  messages: 'You save the chat before it disappears.',
+  work: 'Work follows you into your screenshots.',
+  tech: 'You keep the technical thing you want to understand.',
+  learning: 'You save what you are trying to learn.',
+  systems: 'You keep the diagram so you can think about it later.',
+  vibes: 'Almost no words here. The mood is the point.',
+}
+
+/** One friendly sentence about what a theme suggests. Never a stat or a raw token. */
+export function suggestionFor(id: string, label: string): string {
+  return SUGGESTIONS[id] ?? `You keep coming back to ${label.toLowerCase()}.`
+}
+
 export function epithetFor(themes: Theme[]): string {
   if (themes.length === 0) return 'Nothing We Could Keep'
   const ranked = themes.filter((theme) => theme.id !== 'vibes').sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))

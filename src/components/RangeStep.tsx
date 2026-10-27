@@ -35,13 +35,11 @@ export function RangeStep({
 
   return (
     <section className="win range-step">
-      <TitleBar title="PICK A STRETCH" />
+      <TitleBar title="LORE" />
       <div className="win-body">
-        <p className="kicker">A LITTLE TOO MUCH LORE</p>
-        <h1 className="pixel-title">Pick a stretch of up to {MAX_SHOTS}.</h1>
+        <h1 className="pixel-title">That’s a lot of screenshots</h1>
         <p className="body">
-          This roll has {files.length} screenshots after duplicates. One reading stops at {MAX_SHOTS}. The dates below
-          start on the most recent {MAX_SHOTS}.
+          Pick a stretch of up to {MAX_SHOTS}. Then you’ll guess three themes. These dates start on the most recent ones.
         </p>
         {note && <p className="banner">{note}</p>}
         <div className="date-row">

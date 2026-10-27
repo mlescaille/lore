@@ -49,9 +49,8 @@ export default function App() {
         )}
         {phase.type === 'preparing' && (
           <StatusCard
-            eyebrow="ON THIS DEVICE"
-            title={phase.progress.label}
-            detail="Duplicates come out. Dates get read. Nothing is uploaded."
+            title="Reading your screenshots"
+            detail="Nothing is uploaded. Next you’ll guess three themes."
             done={phase.progress.done}
             total={phase.progress.total}
           />
@@ -71,9 +70,8 @@ export default function App() {
         )}
         {phase.type === 'finishing' && (
           <StatusCard
-            eyebrow="STILL HERE"
-            title={phase.label}
-            detail={phase.detail ?? 'Sensitive shots leave before any theme is named.'}
+            title="Finding your lore"
+            detail="This stays on your device. Your portrait is next."
             done={phase.done ?? 0}
             total={phase.total ?? 0}
             indeterminate={!phase.total}
@@ -89,13 +87,13 @@ export default function App() {
         )}
         {phase.type === 'error' && (
           <section className="win error-block">
-            <TitleBar title="SETUP HALTED" />
+            <TitleBar title="LORE" />
             <div className="win-body">
-              <h1 className="pixel-title">That didn’t finish.</h1>
+              <h1 className="pixel-title">That didn’t finish</h1>
               <p className="body">{phase.message}</p>
               <div className="actions">
                 <Button size="lg" onClick={session.readAnother}>
-                  Back to the start
+                  Start over
                 </Button>
               </div>
             </div>
@@ -107,14 +105,14 @@ export default function App() {
       <Dialog open={session.confirming} onOpenChange={session.setConfirming}>
         <DialogContent>
           <header className="titlebar">
-            <DialogTitle>Forget this reading?</DialogTitle>
+            <DialogTitle>Forget this?</DialogTitle>
             <DialogClose className="win-x" aria-label="Close">
               ×
             </DialogClose>
           </header>
           <div className="win-body">
             <DialogDescription className="body">
-              Clears the screen and anything saved on this device. Your files stay where they were. Lore never had a copy on a server.
+              This clears Lore on this device. Your screenshots stay where they were.
             </DialogDescription>
             <div className="actions">
               <Button onClick={() => void session.forget()}>Forget</Button>

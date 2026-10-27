@@ -1,55 +1,25 @@
+import { scoreSentence } from '../pipeline/scoring.ts'
 import type { ScoreResult } from '../pipeline/scoring.ts'
-import type { LoreResult } from '../types.ts'
 import { TitleBar } from './Window.tsx'
 
-export function ScorePanel({ result, score }: { result: LoreResult; score: ScoreResult }) {
-  const top = [...result.themes].sort((a, b) => b.count - a.count).slice(0, 3)
-  const matched = new Set(score.matches.filter((match) => match.matched).map((match) => match.themeId))
-  const missed = top.filter((theme) => !matched.has(theme.id))
-  const headline =
-    score.guessCount === 0
-      ? 'No guess on the table.'
-      : score.matchedCount >= score.guessCount
-        ? 'You named every one.'
-        : score.matchedCount === 0
-          ? 'The record disagreed.'
-          : `You named ${score.matchedCount} of ${score.guessCount}.`
-
+export function ScorePanel({ score }: { score: ScoreResult }) {
   return (
     <section className="win score-panel">
-      <TitleBar title="SCORE.EXE" />
+      <TitleBar title="LORE" />
       <div className="win-body">
-        <p className="kicker">THE GAP</p>
-        <h2 className="pixel-title score-hero">{headline}</h2>
-        <div className="score-columns">
-          <div>
-            <h3>You guessed</h3>
-            <ol className="match-list">
-              {score.matches.map((match) => (
-                <li key={match.guess}>
-                  <span>{match.guess}</span>
-                  <span className={match.matched ? 'link-mark' : 'link-miss'} aria-hidden="true">
-                    {match.matched ? '→' : '×'}
-                  </span>
-                  <span>{match.matched ? match.themeLabel : 'not in the record'}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-          <div>
-            <h3>The record</h3>
-            <ol className="rank-list">
-              {top.map((theme, index) => (
-                <li key={theme.id}>
-                  <em>{index + 1}</em>
-                  <span>{theme.label}</span>
-                  <strong>{theme.count}</strong>
-                </li>
-              ))}
-            </ol>
-            {missed.length > 0 && <p className="note">You didn’t name {missed.map((theme) => theme.label).join(', ')}.</p>}
-          </div>
-        </div>
+        <h2 className="pixel-title">Your guess</h2>
+        <p className="body">{scoreSentence(score.matchedCount, score.guessCount)}</p>
+        {score.matches.length > 0 && (
+          <ul className="score-list">
+            {score.matches.map((match) => (
+              <li key={match.guess}>
+                {match.matched && match.themeLabel
+                  ? `${match.guess} matched ${match.themeLabel}.`
+                  : `${match.guess} did not match.`}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   )

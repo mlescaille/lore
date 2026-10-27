@@ -120,6 +120,12 @@ export function assignMatches(guesses: string[], themes: ScoreTheme[], matrix: n
   }
 }
 
+/** One plain sentence for the guess. "You got 2 of 3 right." */
+export function scoreSentence(matched: number, total: number): string {
+  if (total <= 0) return 'You did not make a guess.'
+  return `You got ${matched} of ${total} right.`
+}
+
 export function scoreGuessesLexically(guesses: string[], themes: ScoreTheme[], threshold = 0.5): ScoreResult {
   const clean = guesses.map((guess) => guess.trim()).filter(Boolean)
   return assignMatches(clean, themes, lexicalMatrix(clean, themes), threshold)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cosine } from './vector.ts'
-import { assignMatches, lexicalSimilarity, scoreGuessesLexically, type ScoreTheme } from './scoring.ts'
+import { assignMatches, lexicalSimilarity, scoreGuessesLexically, scoreSentence, type ScoreTheme } from './scoring.ts'
 
 const trip: ScoreTheme = {
   id: 'lisbon',
@@ -39,6 +39,7 @@ describe('scoring', () => {
     expect(score.matches.find((match) => match.guess === 'cooking')?.themeId).toBe('recipes')
     expect(score.matches.find((match) => match.guess === 'outer space')?.matched).toBe(false)
     expect(score.topThemeIds).toEqual(['recipes', 'lisbon', 'chat'])
+    expect(scoreSentence(score.matchedCount, score.guessCount)).toBe('You got 2 of 3 right.')
   })
 
   it('gives a contested theme to the closer guess', () => {

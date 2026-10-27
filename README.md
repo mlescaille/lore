@@ -1,6 +1,6 @@
 # Lore
 
-Discover your lore. Lore treats a set of screenshots as a diary you didn’t agree to write: you guess the top three themes, then the app shows the patterns, scores the guess by meaning, and ends on a playful biography card.
+Discover your lore. You drop in your screenshots, guess the three things you think you save most, and Lore shows a short portrait of you based on what you actually kept.
 
 Everything that touches your pictures runs in the browser. There is no backend and no account.
 
@@ -21,8 +21,8 @@ What stays, and how it is thrown away:
 2. Text is read on device (your files) or taken from the sample manifest (the sample set).
 3. **Exclusion runs before themes, chapters, or display.** Account, card, routing, and IBAN-like numbers, a built-in medical word list, and any words you type under “Leave words out” remove the whole record. Only counts remain. The check sees the raw read; themes never do.
 4. Low-confidence OCR, fragments, and tokens like `150k` are dropped before any theme is named. Theme names are human labels (Celebrations, Systems notes), not leftover tokens.
-5. The biography card uses theme names, counts, and dates. Never the words from a screenshot.
-6. `data.json` is an explicit download of the reading, including OCR text. The card is not.
+5. The portrait and the shared picture use theme names, counts, dates, and a one-line title. Never the words from a screenshot, and never the pictures themselves.
+6. `data.json` is an explicit download of the reading, including OCR text. The shared picture is not.
 7. “Keep this reading on this device” writes the reading (not the image files) to IndexedDB. It is off until you turn it on.
 8. **Forget** deletes that database, drops the in-memory reading, and revokes image URLs. Your original files are untouched.
 
@@ -37,7 +37,7 @@ npm run dev
 
 Open [http://127.0.0.1:4317/lore/](http://127.0.0.1:4317/lore/). The app is built to live under `/lore`.
 
-The interface is one original retro installer: pixel chrome for windows and buttons, Atkinson Hyperlegible for anything you read or type, beveled panels, and a trading-card biography. There is no theme switch.
+The interface is a short sequence of windows: drop screenshots in, guess three themes, then read the portrait. Silkscreen is the logo and the headings. Atkinson Hyperlegible is everything you read. The window frame is the only chrome.
 
 ```bash
 npm test          # exclusion, timestamps, chaptering, scoring, sample coherence

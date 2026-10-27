@@ -43,36 +43,23 @@ export function Landing({
       }}
     >
       <section className="win setup">
-        <TitleBar title="LORE SETUP" />
+        <TitleBar title="LORE" />
         <div className="win-body">
-          <p className="kicker">STEP 1 OF 2 · ADMIT THE FOLDER</p>
-          <h1 className="pixel-title">
-            This installer has opinions.
-            <span className="cursor" aria-hidden="true" />
-          </h1>
-          <p className="body">Guess three themes. Then it opens the pictures and tells you what you actually kept.</p>
-          <div className="install-bar is-demo" role="img" aria-label="Waiting for a folder">
-            <span>
-              <i />
-            </span>
-          </div>
-          <p className="status-line">Asking nicely before opening the folder…</p>
+          <h1 className="pixel-title">Drop in your screenshots</h1>
+          <p className="body">Lore finds what you keep saving, then shows you a short portrait of you.</p>
           {saved && (
             <div className="saved-row">
               <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenSaved}>
-                Open last file
+                Open your last reading
               </button>
               <button type="button" className="btn btn-quiet btn-sm" onClick={onForgetSaved}>
-                Delete
+                Forget it
               </button>
             </div>
           )}
           <div className="roll-actions">
-            <button type="button" className="roll-sample" onClick={onSample}>
-              Load sample
-            </button>
             <label className="roll-primary">
-              <span>My screenshots</span>
+              <span>Choose screenshots</span>
               <input
                 type="file"
                 accept={ACCEPT}
@@ -84,6 +71,9 @@ export function Landing({
                 }}
               />
             </label>
+            <button type="button" className="roll-sample" onClick={onSample}>
+              Try the sample
+            </button>
             <label className="roll-folder">
               <span>or a folder</span>
               <input
@@ -100,22 +90,10 @@ export function Landing({
               />
             </label>
           </div>
-          <ul className="facts">
-            <li>0 files leave this machine</li>
-            <li>Sensitive shots are skipped</li>
-            <li>500, then the wizard stops</li>
-          </ul>
-          <p className="fine">Sample disk: Jules Navarro, fictional, Portland.</p>
-          <details className="dates">
-            <summary>About dates</summary>
-            <p>
-              Photo time, then filename, then the file date, which we flag. iPhones sometimes strip the original time on
-              the way out of Photos.
-            </p>
-          </details>
+          <p className="fine">Nothing is uploaded. Pictures that look private are skipped.</p>
         </div>
       </section>
-      {dragging && <div className="drop-veil">Drop the camera roll</div>}
+      {dragging && <div className="drop-veil">Drop your screenshots</div>}
     </div>
   )
 }

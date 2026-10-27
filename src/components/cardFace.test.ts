@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { suggestionFor } from '../pipeline/biography.ts'
+import { scoreSentence } from '../pipeline/scoring.ts'
 import { epithetFontSize } from './CardFace.tsx'
 
 describe('epithet size', () => {
@@ -10,5 +12,16 @@ describe('epithet size', () => {
     expect(epithetFontSize(mid, false)).toBeGreaterThan(epithetFontSize(long, false))
     expect(epithetFontSize(long, true)).toBeGreaterThan(epithetFontSize(long, false))
     expect(epithetFontSize(long, false)).toBeGreaterThanOrEqual(26)
+  })
+})
+
+describe('plain portrait', () => {
+  it('describes a theme in one friendly sentence, with no stat labels', () => {
+    const line = suggestionFor('celebrations', 'Celebrations')
+    expect(line.endsWith('.')).toBe(true)
+    expect(line.length).toBeGreaterThan(20)
+    expect(line).not.toMatch(/HP|ATK|DEF|RARE|COMMON/)
+    expect(scoreSentence(2, 3)).toBe('You got 2 of 3 right.')
+    expect(scoreSentence(0, 0)).toBe('You did not make a guess.')
   })
 })
