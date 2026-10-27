@@ -1,4 +1,5 @@
 import { suggestionFor } from '../pipeline/biography.ts'
+import { topThemes } from '../pipeline/scoring.ts'
 import { formatRange, plural } from '../lib/format.ts'
 import { downloadJson } from '../share/export.ts'
 import type { RevealModel } from '../useSession.ts'
@@ -19,7 +20,7 @@ export function Reveal({
   onAnother: () => void
 }) {
   const { result, score } = model
-  const top = [...result.themes].sort((a, b) => b.count - a.count).slice(0, 3)
+  const top = topThemes(result.themes)
   const start = result.records[0]?.timestamp
   const end = result.records[result.records.length - 1]?.timestamp
   const range = start && end ? formatRange(start, end) : ''

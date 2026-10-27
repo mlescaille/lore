@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { suggestionFor } from '../pipeline/biography.ts'
+import { topThemes } from '../pipeline/scoring.ts'
 import { buildCaption, cardToBlob, downloadBlob, shareCard } from '../share/export.ts'
 import { formatRange } from '../lib/format.ts'
 import type { LoreResult } from '../types.ts'
@@ -8,7 +9,7 @@ import { TitleBar } from './Window.tsx'
 import { Button } from './ui/button.tsx'
 
 function modelFor(result: LoreResult, size: 'square' | 'story'): CardModel {
-  const top = [...result.themes].sort((a, b) => b.count - a.count).slice(0, 3)
+  const top = topThemes(result.themes)
   const start = result.records[0]?.timestamp ?? result.chapters[0]?.start
   const end = result.records[result.records.length - 1]?.timestamp ?? result.chapters[result.chapters.length - 1]?.end
   return {

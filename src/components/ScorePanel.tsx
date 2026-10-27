@@ -15,7 +15,7 @@ export function ScorePanel({ score }: { score: ScoreResult }) {
               <li key={match.guess}>
                 {match.matched && match.themeLabel
                   ? `${match.guess} matched ${match.themeLabel}.`
-                  : `${match.guess} did not match.`}
+                  : `${match.guess} was not in the top themes.`}
               </li>
             ))}
           </ul>

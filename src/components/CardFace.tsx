@@ -16,10 +16,14 @@ export interface CardModel {
 
 const PIXEL = 'Silkscreen, ui-monospace, monospace'
 const BODY = '"Atkinson Hyperlegible", sans-serif'
-const INK = '#14081c'
-const PAPER = '#fbf7ff'
-const CHROME = '#2a0c48'
-const BUTTER = '#ffe14a'
+const INK = '#140018'
+const YELLOW = '#ffe600'
+const MAGENTA = '#ff2bd6'
+const LIME = '#c6ff00'
+const CYAN = '#00e5ff'
+const TANGERINE = '#ff5a00'
+const COBALT = '#0033ff'
+const ROWS = [LIME, CYAN, TANGERINE]
 
 /** Display size for the portrait title. Longer lines step down so they wrap on words. */
 export function epithetFontSize(epithet: string, story: boolean): number {
@@ -51,7 +55,7 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
     height: outer,
     boxSizing: 'border-box',
     overflow: 'hidden',
-    background: '#1a062e',
+    background: COBALT,
     padding: pad,
     display: 'flex',
   }
@@ -66,25 +70,25 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          background: PAPER,
+          background: YELLOW,
           color: INK,
-          borderTop: '6px solid #fffdf8',
-          borderLeft: '6px solid #fffdf8',
-          borderBottom: '6px solid #1a062e',
-          borderRight: '6px solid #1a062e',
+          borderTop: '6px solid #ffffff',
+          borderLeft: '6px solid #ffffff',
+          borderBottom: '6px solid #001466',
+          borderRight: '6px solid #001466',
         }}
       >
         <header
           style={{
             flex: 'none',
-            background: CHROME,
-            color: BUTTER,
+            background: MAGENTA,
+            color: INK,
             fontFamily: PIXEL,
             fontSize: story ? 28 : 22,
             lineHeight: 1.3,
             letterSpacing: '0.04em',
             padding: story ? '22px 40px' : '16px 32px',
-            borderBottom: '5px solid ' + BUTTER,
+            borderBottom: '5px solid ' + YELLOW,
           }}
         >
           Your lore
@@ -116,12 +120,16 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
             {model.epithet}
           </h2>
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', gap: story ? 20 : 12 }}>
-            {model.themes.map((theme) => (
+            {model.themes.map((theme, index) => (
               <div
                 key={theme.label}
                 style={{
-                  borderTop: '3px solid ' + CHROME,
-                  paddingTop: story ? 16 : 10,
+                  background: ROWS[index % ROWS.length],
+                  borderTop: '3px solid #ffffff',
+                  borderLeft: '3px solid #ffffff',
+                  borderBottom: '3px solid #001466',
+                  borderRight: '3px solid #001466',
+                  padding: story ? '16px 18px' : '12px 14px',
                 }}
               >
                 <p

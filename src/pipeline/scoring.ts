@@ -65,15 +65,23 @@ export function vectorMatrix(guessVectors: number[][], themeVectors: number[][])
   return guessVectors.map((guess) => themeVectors.map((theme) => cosine(guess, theme)))
 }
 
+/** The themes the portrait shows: top three by count, id as the tie-break. */
+export function topThemes<T extends { id: string; count: number }>(themes: T[]): T[] {
+  return [...themes].sort((a, b) => b.count - a.count || a.id.localeCompare(b.id)).slice(0, 3)
+}
+
 /**
  * Greedy one-to-one assignment. A guess matches when its best remaining theme
  * clears the threshold. Each theme can satisfy only one guess.
+ * Only the displayed top 3 can count as a match.
  */
 export function assignMatches(guesses: string[], themes: ScoreTheme[], matrix: number[][], threshold: number): ScoreResult {
   const clean = guesses.map((guess) => guess.trim()).filter(Boolean)
+  const allowed = new Set(topThemes(themes).map((theme) => themes.indexOf(theme)))
   const pairs: { gi: number; ti: number; sim: number }[] = []
   for (let gi = 0; gi < clean.length; gi++) {
     for (let ti = 0; ti < themes.length; ti++) {
+      if (!allowed.has(ti)) continue
       pairs.push({ gi, ti, sim: matrix[gi]?.[ti] ?? 0 })
     }
   }
@@ -94,7 +102,7 @@ export function assignMatches(guesses: string[], themes: ScoreTheme[], matrix: n
     const hit = assigned.get(gi)
     if (!hit) {
       let best = 0
-      for (let ti = 0; ti < themes.length; ti++) best = Math.max(best, matrix[gi]?.[ti] ?? 0)
+      for (const ti of allowed) best = Math.max(best, matrix[gi]?.[ti] ?? 0)
       return { guess, themeId: null, themeLabel: null, similarity: best, matched: false }
     }
     const theme = themes[hit.ti]
@@ -107,10 +115,7 @@ export function assignMatches(guesses: string[], themes: ScoreTheme[], matrix: n
     }
   })
 
-  const topThemeIds = [...themes]
-    .sort((a, b) => b.count - a.count || a.id.localeCompare(b.id))
-    .slice(0, 3)
-    .map((theme) => theme.id)
+  const topThemeIds = topThemes(themes).map((theme) => theme.id)
 
   return {
     matches,
