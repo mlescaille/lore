@@ -72,8 +72,10 @@ export default function App() {
           <StatusCard
             eyebrow="STILL HERE"
             title={phase.label}
-            detail="Sensitive shots leave before any theme is named."
-            indeterminate
+            detail={phase.detail ?? 'Sensitive shots leave before any theme is named.'}
+            done={phase.done ?? 0}
+            total={phase.total ?? 0}
+            indeterminate={!phase.total}
           />
         )}
         {phase.type === 'reveal' && (

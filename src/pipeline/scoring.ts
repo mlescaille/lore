@@ -28,7 +28,9 @@ const CONCEPTS: string[][] = [
   ['recipe', 'cook', 'cooking', 'pasta', 'dinner', 'ingredient', 'oven', 'bake', 'baking', 'kitchen', 'miso', 'cookie', 'grocery', 'risotto'],
   ['work', 'office', 'figma', 'critique', 'sprint', 'client', 'design', 'mock', 'layout', 'slack', 'ticket'],
   ['fitness', 'run', 'running', 'mile', 'workout', 'gym', 'pace', 'marathon', 'interval', 'tempo', 'training', 'race'],
-  ['friend', 'chat', 'gremlin', 'meme', 'brunch', 'karaoke', 'group'],
+  ['friend', 'friends', 'family', 'people', 'chat', 'gremlin', 'meme', 'brunch', 'karaoke', 'group', 'portrait'],
+  ['celebration', 'party', 'birthday', 'wedding', 'toast', 'gathering', 'festival', 'celebrate'],
+  ['tech', 'technology', 'software', 'computer', 'diagram', 'system', 'systems', 'latency', 'consistency', 'architecture', 'learning', 'algorithm', 'protocol', 'availability', 'partition'],
 ]
 
 const CONCEPT_OF = new Map<string, string>()

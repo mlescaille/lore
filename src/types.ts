@@ -1,6 +1,6 @@
 export type TimestampSource = 'exif' | 'filename' | 'lastModified'
 export type LabelingMode = 'keywords' | 'model'
-export type Grouping = 'embeddings' | 'lexical'
+export type Grouping = 'embeddings' | 'lexical' | 'vision'
 
 export interface ExclusionCounts {
   account: number
@@ -71,5 +71,8 @@ export interface InputShot {
   id: string
   timestamp: string
   timestampSource: TimestampSource
+  /** Cleaned text used for themes and stored on the record. */
   text: string
+  /** Unfiltered OCR. Exclusion only. Never stored or shown. */
+  sensitiveText?: string
 }

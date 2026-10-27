@@ -15,6 +15,7 @@ export interface Progress {
   label: string
   done: number
   total: number
+  detail?: string
 }
 
 export interface RevealModel {
@@ -31,7 +32,7 @@ export type Phase =
   | { type: 'preparing'; progress: Progress }
   | { type: 'range'; files: PreparedFile[]; note: string }
   | { type: 'guess'; kind: 'sample' | 'own'; ready: boolean; progress: Progress; note: string; holding: boolean }
-  | { type: 'finishing'; label: string }
+  | { type: 'finishing'; label: string; detail?: string; done?: number; total?: number }
   | { type: 'reveal'; model: RevealModel }
   | { type: 'error'; message: string }
 
@@ -48,13 +49,24 @@ function pause(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function scoreReading(guesses: string[], result: LoreResult, kind: 'sample' | 'own'): Promise<ScoreResult> {
+function formatMb(bytes: number): string {
+  const mb = bytes / 1e6
+  if (!Number.isFinite(mb) || mb <= 0) return '0 MB'
+  return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`
+}
+
+async function scoreReading(
+  guesses: string[],
+  result: LoreResult,
+  kind: 'sample' | 'own',
+  onProgress?: (done: number, total: number) => void,
+): Promise<ScoreResult> {
   if (kind === 'own' && result.themes.length > 0) {
     try {
       const { embedTexts } = await import('./pipeline/embed.ts')
       const clean = guesses.map((guess) => guess.trim()).filter(Boolean)
       const labels = result.themes.map((theme) => `${theme.label}. ${theme.keywords.join(', ')}`)
-      const vectors = await embedTexts([...clean, ...labels])
+      const vectors = await embedTexts([...clean, ...labels], onProgress)
       const matrix = vectorMatrix(vectors.slice(0, clean.length), vectors.slice(clean.length))
       return assignMatches(clean, result.themes, matrix, 0.36)
     } catch {
@@ -138,30 +150,70 @@ export function useSession() {
       setPhase({ type: 'finishing', label: 'Setting aside anything sensitive' })
       await pause(280)
       if (runId.current !== token) return
-      const embed =
+      const perceive =
         current.kind === 'own'
-          ? async (texts: string[]) => {
-              setPhase({ type: 'finishing', label: 'Loading a small meaning model. It stays on this device.' })
-              const { embedTexts } = await import('./pipeline/embed.ts')
-              return embedTexts(texts, (done, total) => {
-                if (runId.current !== token) return
-                setPhase({ type: 'finishing', label: `Finding the patterns · ${done} of ${total}` })
+          ? async (ids: string[]) => {
+              const items = ids.flatMap((id) => {
+                const blob = blobs.current.get(id)
+                return blob ? [{ id, blob }] : []
+              })
+              const { classifyImages } = await import('./pipeline/vision.ts')
+              setPhase({
+                type: 'finishing',
+                label: 'Looking at the pictures',
+                detail: 'The vision model stays on this device. Nothing is uploaded.',
+                done: 0,
+                total: Math.max(items.length, 1),
+              })
+              return classifyImages(items, {
+                onDownload: (loaded, total) => {
+                  if (runId.current !== token) return
+                  const pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0
+                  setPhase({
+                    type: 'finishing',
+                    label: 'Loading the vision model',
+                    detail: total > 0 ? `${formatMb(loaded)} of ${formatMb(total)}. It stays on this device.` : 'It stays on this device.',
+                    done: pct,
+                    total: 100,
+                  })
+                },
+                onImage: (done, total) => {
+                  if (runId.current !== token) return
+                  setPhase({
+                    type: 'finishing',
+                    label: 'Looking at the pictures',
+                    detail: 'The vision model stays on this device. Nothing is uploaded.',
+                    done,
+                    total,
+                  })
+                },
               })
             }
           : undefined
-      if (!embed) {
+      if (!perceive) {
         setPhase({ type: 'finishing', label: 'Finding the patterns' })
         await pause(420)
       }
       if (runId.current !== token) return
       const result = await analyzeShots(current.shots, {
         blocklist: parseBlocklist(guess.block),
-        embed,
+        perceive,
         runDate: new Date().toISOString(),
       })
       if (runId.current !== token) return
-      setPhase({ type: 'finishing', label: 'Writing the biography' })
-      const score = await scoreReading(guess.guesses, result, current.kind)
+      if (current.kind === 'own') {
+        setPhase({
+          type: 'finishing',
+          label: 'Loading a small meaning model. It stays on this device.',
+          detail: 'Used only to score your guess against the themes.',
+        })
+      } else {
+        setPhase({ type: 'finishing', label: 'Writing the biography' })
+      }
+      const score = await scoreReading(guess.guesses, result, current.kind, (done, total) => {
+        if (runId.current !== token) return
+        setPhase({ type: 'finishing', label: `Scoring the guess · ${done} of ${total}` })
+      })
       result.biography.closingLine =
         result.records.length === 0
           ? 'The sensitive-text check kept the whole set back. Only the count remains.'
@@ -205,37 +257,94 @@ export function useSession() {
         progress: { label: 'Reading the words', done: 0, total: files.length },
         note,
       })
+      let wordsReady = false
+      let ocrSnap = { done: 0, total: files.length }
+      let visionSnap = { loaded: 0, total: 0 }
+      const paintGuess = () => {
+        if (runId.current !== token || wordsReady) return
+        const downloading = visionSnap.total > 0 && visionSnap.loaded < visionSnap.total
+        if (downloading) {
+          const pct = Math.min(100, Math.round((visionSnap.loaded / visionSnap.total) * 100))
+          setPhase({
+            type: 'guess',
+            kind: 'own',
+            ready: false,
+            holding: Boolean(pending.current),
+            progress: {
+              label: 'Loading the vision model',
+              detail: `${formatMb(visionSnap.loaded)} of ${formatMb(visionSnap.total)}. Downloaded once, then it stays on this device.`,
+              done: pct,
+              total: 100,
+            },
+            note,
+          })
+          return
+        }
+        setPhase({
+          type: 'guess',
+          kind: 'own',
+          ready: false,
+          holding: Boolean(pending.current),
+          progress: { label: 'Reading the words', done: ocrSnap.done, total: ocrSnap.total },
+          note,
+        })
+      }
+      const visionReady = import('./pipeline/vision.ts')
+        .then(({ preloadVision }) =>
+          preloadVision((loaded, total) => {
+            visionSnap = { loaded, total }
+            paintGuess()
+          }),
+        )
+        .catch(() => undefined)
       try {
         const { recognizeAll } = await import('./pipeline/ocr.ts')
         const concurrency = navigator.hardwareConcurrency > 4 ? 3 : 2
         const recognized = await recognizeAll(
           files.map((file) => ({ id: file.id, blob: file.blob })),
           (done, total) => {
-            if (runId.current !== token) return
-            setPhase({
-              type: 'guess',
-              kind: 'own',
-              ready: false,
-              holding: Boolean(pending.current),
-              progress: { label: 'Reading the words', done, total },
-              note,
-            })
+            ocrSnap = { done, total }
+            paintGuess()
           },
           concurrency,
           () => runId.current === token,
         )
         if (runId.current !== token) return
-        const textOf = new Map(recognized.map((item) => [item.id, item.text]))
+        const textOf = new Map(recognized.map((item) => [item.id, item]))
         job.current = {
           kind: 'own',
           note,
-          shots: files.map((file) => ({
-            id: file.id,
-            timestamp: file.timestamp,
-            timestampSource: file.timestampSource,
-            text: textOf.get(file.id) ?? '',
-          })),
+          shots: files.map((file) => {
+            const read = textOf.get(file.id)
+            return {
+              id: file.id,
+              timestamp: file.timestamp,
+              timestampSource: file.timestampSource,
+              text: read?.cleanText ?? '',
+              sensitiveText: read?.text ?? '',
+            }
+          }),
         }
+        wordsReady = true
+        if (runId.current !== token) return
+        if (visionSnap.total > 0 && visionSnap.loaded < visionSnap.total) {
+          const pct = Math.min(100, Math.round((visionSnap.loaded / visionSnap.total) * 100))
+          setPhase({
+            type: 'guess',
+            kind: 'own',
+            ready: false,
+            holding: Boolean(pending.current),
+            progress: {
+              label: 'Loading the vision model',
+              detail: `${formatMb(visionSnap.loaded)} of ${formatMb(visionSnap.total)}. Downloaded once, then it stays on this device.`,
+              done: pct,
+              total: 100,
+            },
+            note,
+          })
+        }
+        await visionReady
+        if (runId.current !== token) return
         readyRef.current = true
         setPhase({
           type: 'guess',

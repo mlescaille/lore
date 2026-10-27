@@ -86,7 +86,7 @@ export function GuessStep({
       <StatusCard
         eyebrow={kind === 'sample' ? 'SAMPLE ROLL' : 'ON THIS DEVICE'}
         title={progress.label}
-        detail={note || 'Names stay hidden until you commit.'}
+        detail={progress.detail || note || 'Names stay hidden until you commit.'}
         done={progress.done}
         total={progress.total}
       />

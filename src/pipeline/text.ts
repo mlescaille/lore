@@ -14,6 +14,10 @@ export function stem(word: string): string {
   return word
 }
 
+export function isStopWord(word: string): boolean {
+  return STOP.has(word)
+}
+
 export function tokenize(text: string): Token[] {
   const raw = text
     .toLowerCase()
@@ -21,7 +25,7 @@ export function tokenize(text: string): Token[] {
     .split(/[^a-z0-9]+/)
   const out: Token[] = []
   for (const surface of raw) {
-    if (surface.length <= 2 || STOP.has(surface) || /^\d+$/.test(surface)) continue
+    if (surface.length <= 2 || STOP.has(surface) || /\d/.test(surface)) continue
     out.push({ surface, stem: stem(surface) })
   }
   return out
