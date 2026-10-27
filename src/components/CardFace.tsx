@@ -16,14 +16,13 @@ export interface CardModel {
 
 const PIXEL = 'Silkscreen, ui-monospace, monospace'
 const BODY = '"Atkinson Hyperlegible", sans-serif'
-const INK = '#140018'
-const YELLOW = '#ffe600'
-const MAGENTA = '#ff2bd6'
-const LIME = '#c6ff00'
-const CYAN = '#00e5ff'
-const TANGERINE = '#ff5a00'
-const COBALT = '#0033ff'
-const ROWS = [LIME, CYAN, TANGERINE]
+const INK = '#1a120c'
+const PAPER = '#fffdf8'
+const CREAM = '#fffdf8'
+const TOMATO = '#a33b24'
+const DESK = '#163e48'
+const MARIGOLD = '#f0b429'
+const BEVEL = '#0c2a30'
 
 /** Display size for the portrait title. Longer lines step down so they wrap on words. */
 export function epithetFontSize(epithet: string, story: boolean): number {
@@ -47,7 +46,7 @@ function shots(count: number): string {
 export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<HTMLDivElement> }) {
   const story = model.size === 'story'
   const outer = story ? 1920 : 1080
-  const pad = story ? 48 : 36
+  const pad = story ? 28 : 18
   const epithetSize = epithetFontSize(model.epithet, story)
 
   const shell: CSSProperties = {
@@ -55,7 +54,7 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
     height: outer,
     boxSizing: 'border-box',
     overflow: 'hidden',
-    background: COBALT,
+    background: DESK,
     padding: pad,
     display: 'flex',
   }
@@ -70,25 +69,25 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          background: YELLOW,
+          background: PAPER,
           color: INK,
           borderTop: '6px solid #ffffff',
           borderLeft: '6px solid #ffffff',
-          borderBottom: '6px solid #001466',
-          borderRight: '6px solid #001466',
+          borderBottom: '6px solid ' + BEVEL,
+          borderRight: '6px solid ' + BEVEL,
         }}
       >
         <header
           style={{
             flex: 'none',
-            background: MAGENTA,
-            color: INK,
+            background: TOMATO,
+            color: CREAM,
             fontFamily: PIXEL,
             fontSize: story ? 28 : 22,
             lineHeight: 1.3,
             letterSpacing: '0.04em',
             padding: story ? '22px 40px' : '16px 32px',
-            borderBottom: '5px solid ' + YELLOW,
+            borderBottom: '5px solid ' + MARIGOLD,
           }}
         >
           Your lore
@@ -124,14 +123,36 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
               <div
                 key={theme.label}
                 style={{
-                  background: ROWS[index % ROWS.length],
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: story ? 8 : 4,
+                  background: PAPER,
                   borderTop: '3px solid #ffffff',
-                  borderLeft: '3px solid #ffffff',
-                  borderBottom: '3px solid #001466',
-                  borderRight: '3px solid #001466',
+                  borderLeft: '8px solid ' + TOMATO,
+                  borderBottom: '3px solid ' + BEVEL,
+                  borderRight: '3px solid ' + BEVEL,
                   padding: story ? '16px 18px' : '12px 14px',
                 }}
               >
+                <p
+                  style={{
+                    margin: 0,
+                    alignSelf: 'flex-start',
+                    minWidth: story ? 36 : 28,
+                    height: story ? 36 : 28,
+                    padding: '0 8px',
+                    display: 'grid',
+                    placeItems: 'center',
+                    background: TOMATO,
+                    color: CREAM,
+                    fontFamily: BODY,
+                    fontWeight: 700,
+                    fontSize: story ? 22 : 16,
+                    lineHeight: 1,
+                  }}
+                >
+                  {index + 1}
+                </p>
                 <p
                   style={{
                     margin: 0,

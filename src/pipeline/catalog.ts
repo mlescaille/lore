@@ -3,7 +3,13 @@ import type { VisualHit } from './signals.ts'
 export interface ThemeSpec {
   id: string
   label: string
+  /** Short captions. Embedded as "a photo of …". */
   prompts: string[]
+  /**
+   * Full phrases embedded as written. Used for screenshots and diagrams,
+   * which are not photos and get worse when forced into the photo template.
+   */
+  queries?: string[]
   words: string[]
 }
 
@@ -80,11 +86,19 @@ export const CATALOG: ThemeSpec[] = [
   },
   {
     id: 'systems',
-    label: 'Systems notes',
+    label: 'Diagrams',
     prompts: [
       'a distributed systems diagram',
       'a chart about consistency latency and availability',
       'an architecture diagram of a computer system',
+    ],
+    queries: [
+      'a diagram',
+      'a flowchart',
+      'a chart with text and arrows',
+      'a screenshot of a technical slide',
+      'boxes connected by arrows',
+      'a technical architecture diagram',
     ],
     words: [
       'consistency',
@@ -121,32 +135,53 @@ const OTHER_PROMPTS = ['an abstract texture', 'a blank background']
 
 export interface VisionPrompt {
   themeId: string
+  /** Key used to map a model row back to a theme. */
   prompt: string
+  /** Exact string embedded by the text tower. */
+  text: string
 }
 
 export function visionPrompts(): VisionPrompt[] {
   const prompts: VisionPrompt[] = []
   for (const theme of CATALOG) {
-    for (const prompt of theme.prompts) prompts.push({ themeId: theme.id, prompt })
+    for (const prompt of theme.prompts) {
+      prompts.push({ themeId: theme.id, prompt, text: VISION_TEMPLATE.replace('{}', prompt) })
+    }
+    for (const query of theme.queries ?? []) prompts.push({ themeId: theme.id, prompt: query, text: query })
   }
-  for (const prompt of OTHER_PROMPTS) prompts.push({ themeId: 'other', prompt })
+  for (const prompt of OTHER_PROMPTS) {
+    prompts.push({ themeId: 'other', prompt, text: VISION_TEMPLATE.replace('{}', prompt) })
+  }
   return prompts
 }
 
 const PROMPT_THEME = new Map(visionPrompts().map((item) => [item.prompt, item.themeId]))
 
-/** Collapse prompt scores into one score per theme (the strongest prompt). */
+/**
+ * Average the prompt logits inside each theme, then softmax across themes.
+ * Taking the max probability after a prompt-level softmax lets one stray
+ * prompt (a cookbook page, a slide) steal a diagram.
+ */
 export function aggregateVision(rows: { label: string; score: number }[]): VisualHit[] {
-  const best = new Map<string, number>()
+  const sums = new Map<string, { sum: number; count: number }>()
   for (const row of rows) {
     const themeId = PROMPT_THEME.get(row.label)
     if (!themeId) continue
     const score = Number(row.score)
     if (!Number.isFinite(score)) continue
-    const previous = best.get(themeId) ?? 0
-    if (score > previous) best.set(themeId, score)
+    const bucket = sums.get(themeId) ?? { sum: 0, count: 0 }
+    bucket.sum += score
+    bucket.count += 1
+    sums.set(themeId, bucket)
   }
-  return [...best.entries()]
-    .map(([themeId, score]) => ({ themeId, score }))
+  const means = [...sums.entries()].map(([themeId, bucket]) => ({
+    themeId,
+    logit: bucket.count > 0 ? bucket.sum / bucket.count : 0,
+  }))
+  const peak = means.reduce((max, item) => Math.max(max, item.logit), 0)
+  const weights = means.map((item) => ({ themeId: item.themeId, weight: Math.exp(item.logit - peak) }))
+  const total = weights.reduce((sum, item) => sum + item.weight, 0) || 1
+  return weights
+    .map((item) => ({ themeId: item.themeId, score: item.weight / total }))
     .sort((a, b) => b.score - a.score || a.themeId.localeCompare(b.themeId))
 }

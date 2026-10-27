@@ -4,6 +4,9 @@ import { isStopWord, stem, tokenize } from './text.ts'
 import type { Grouping, InputShot, Theme } from '../types.ts'
 
 const TEXT_LOCK = 2
+/** Below this, the picture is not sure enough to name. It becomes "other". */
+export const VISION_FLOOR = 0.34
+const VISION_MARGIN = 0.05
 
 interface TextScore {
   themeId: string
@@ -35,15 +38,10 @@ export function scoreTextThemes(text: string): TextScore[] {
   return ranked
 }
 
-function visionWins(best: VisualHit, other: number): boolean {
-  if (best.score < 0.03) return false
-  if (!(other > 0)) return true
-  return best.score >= other + 0.012 && best.score >= other * 1.3
-}
-
 /**
  * One human theme per shot. Strong cleaned text wins (a recipe, a diagram).
- * Otherwise the vision score wins. Junk tokens are never a theme name.
+ * A confident vision score wins next. A weak score becomes "other" and is
+ * not shown as a theme. Junk tokens are never a theme name.
  */
 export function chooseThemeId(text: string, visual: VisualHit[] | undefined): string {
   const textRanked = scoreTextThemes(text)
@@ -51,12 +49,12 @@ export function chooseThemeId(text: string, visual: VisualHit[] | undefined): st
   if (bestText && bestText.hits >= TEXT_LOCK) return bestText.themeId
 
   const hits = (visual ?? []).filter((hit) => hit.themeId !== 'other' && CATALOG_BY_ID.has(hit.themeId))
-  const other = (visual ?? []).find((hit) => hit.themeId === 'other')?.score ?? 0
   const bestVisual = hits[0]
-  if (bestVisual && visionWins(bestVisual, other)) return bestVisual.themeId
-
-  if (bestText && bestText.hits >= 1) return bestText.themeId
-  return 'vibes'
+  const runnerUp = hits[1]?.score ?? 0
+  if (bestVisual && bestVisual.score >= VISION_FLOOR && bestVisual.score - runnerUp >= VISION_MARGIN) {
+    return bestVisual.themeId
+  }
+  return 'other'
 }
 
 function keywordsFor(themeId: string, shots: InputShot[]): string[] {
@@ -92,6 +90,7 @@ export function themesFromSignals(
 
   const themes: Theme[] = []
   for (const [id, members] of groups) {
+    if (id === 'other') continue
     if (id === 'vibes') {
       themes.push({ id, label: 'no words, just vibes', keywords: [], count: members.length })
       continue

@@ -1,4 +1,4 @@
-import { aggregateVision, VISION_TEMPLATE, visionPrompts } from './catalog.ts'
+import { aggregateVision, visionPrompts } from './catalog.ts'
 import type { VisualHit } from './signals.ts'
 
 /**
@@ -47,7 +47,7 @@ function runtimeDevice(): 'wasm' | 'cpu' {
 
 async function createTowers(onDownload?: (loaded: number, total: number) => void): Promise<Towers> {
   const started = performance.now()
-  const { AutoProcessor, AutoTokenizer, CLIPTextModelWithProjection, CLIPVisionModelWithProjection, RawImage, dot, env, softmax } =
+  const { AutoProcessor, AutoTokenizer, CLIPTextModelWithProjection, CLIPVisionModelWithProjection, RawImage, dot, env } =
     await import('@huggingface/transformers')
   env.allowLocalModels = false
 
@@ -66,6 +66,7 @@ async function createTowers(onDownload?: (loaded: number, total: number) => void
 
   const prompts = visionPrompts()
   const labels = prompts.map((item) => item.prompt)
+  const embedded = prompts.map((item) => item.text)
   const textOptions = { dtype: 'q8' as const, device: runtimeDevice(), progress_callback }
   const visionOptions = { dtype: 'fp32' as const, device: runtimeDevice(), progress_callback }
 
@@ -76,10 +77,7 @@ async function createTowers(onDownload?: (loaded: number, total: number) => void
     CLIPVisionModelWithProjection.from_pretrained(VISION_MODEL_ID, visionOptions),
   ])
 
-  const textInputs = tokenizer(
-    labels.map((label) => VISION_TEMPLATE.replace('{}', label)),
-    { padding: 'max_length', truncation: true },
-  )
+  const textInputs = tokenizer(embedded, { padding: 'max_length', truncation: true })
   const textOutput = await textModel(textInputs)
   const textEmbeds = textOutput.text_embeds.normalize().tolist() as number[][]
   textModel.dispose?.()
@@ -99,8 +97,7 @@ async function createTowers(onDownload?: (loaded: number, total: number) => void
       const visionOutput = await visionModel(imageInputs)
       const [vector] = visionOutput.image_embeds.normalize().tolist() as number[][]
       const logits = textEmbeds.map((embed) => 100 * dot(vector ?? [], embed))
-      const probabilities = softmax(logits)
-      return labels.map((label, index) => ({ label, score: Number(probabilities[index] ?? 0) }))
+      return labels.map((label, index) => ({ label, score: Number(logits[index] ?? 0) }))
     },
   }
 }

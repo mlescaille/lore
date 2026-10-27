@@ -20,7 +20,7 @@ What stays, and how it is thrown away:
 1. Files are read locally. Duplicates drop out by a hash of the bytes.
 2. Text is read on device (your files) or taken from the sample manifest (the sample set).
 3. **Exclusion runs before themes, chapters, or display.** Account, card, routing, and IBAN-like numbers, a built-in medical word list, and any words you type under “Leave words out” remove the whole record. Only counts remain. The check sees the raw read; themes never do.
-4. Low-confidence OCR, fragments, and tokens like `150k` are dropped before any theme is named. Theme names are human labels (Celebrations, Systems notes), not leftover tokens.
+4. Low-confidence OCR, fragments, and tokens like `150k` are dropped before any theme is named. Theme names are human labels (Celebrations, Diagrams), not leftover tokens.
 5. The portrait and the shared picture use theme names, counts, dates, and a one-line title. Never the words from a screenshot, and never the pictures themselves.
 6. `data.json` is an explicit download of the reading, including OCR text. The shared picture is not.
 7. “Keep this reading on this device” writes the reading (not the image files) to IndexedDB. It is off until you turn it on.

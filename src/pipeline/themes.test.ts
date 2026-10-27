@@ -20,15 +20,31 @@ function shot(id: string, text: string, day: string, sensitiveText?: string): In
 describe('theme labels', () => {
   it('collapses vision prompts into human themes', () => {
     const hits = aggregateVision([
-      { label: 'people celebrating at a party', score: 0.22 },
-      { label: 'a birthday party with balloons and cake', score: 0.31 },
-      { label: 'friends laughing together', score: 0.18 },
-      { label: 'a distributed systems diagram', score: 0.04 },
-      { label: 'an abstract texture', score: 0.03 },
+      { label: 'people celebrating at a party', score: 1.2 },
+      { label: 'a birthday party with balloons and cake', score: 2.4 },
+      { label: 'friends laughing together', score: 0.4 },
+      { label: 'a distributed systems diagram', score: 0.2 },
+      { label: 'a diagram', score: 0.1 },
+      { label: 'an abstract texture', score: 0 },
     ])
     expect(hits[0]).toMatchObject({ themeId: 'celebrations' })
-    expect(hits.find((hit) => hit.themeId === 'celebrations')?.score).toBeCloseTo(0.31)
-    expect(hits.find((hit) => hit.themeId === 'other')?.score).toBeCloseTo(0.03)
+    expect(hits.find((hit) => hit.themeId === 'celebrations')?.score ?? 0).toBeGreaterThan(0.5)
+    expect(hits.find((hit) => hit.themeId === 'other')).toBeTruthy()
+  })
+
+  it('keeps a low-confidence picture out of the theme list', async () => {
+    const weak = [
+      { themeId: 'recipes', score: 0.22 },
+      { themeId: 'food', score: 0.18 },
+      { themeId: 'other', score: 0.14 },
+    ]
+    expect(chooseThemeId('', weak)).toBe('other')
+    const result = await analyzeShots([shot('x', '', '2025-10-04')], {
+      perceive: async () => new Map([['x', weak]]),
+    })
+    expect(result.records[0]?.themeId).toBe('other')
+    expect(result.themes.map((theme) => theme.label)).not.toContain('Recipes')
+    expect(result.themes.map((theme) => theme.id)).not.toContain('other')
   })
 
   it('reads a trip note as travel even if the picture model says fitness', () => {
@@ -74,8 +90,8 @@ describe('theme labels', () => {
       expect(theme.label).not.toMatch(JUNK)
       expect(theme.keywords.join(' ')).not.toMatch(JUNK)
     }
-    expect(result.themes.map((theme) => theme.label)).toEqual(['Celebrations', 'Friends and family', 'Systems notes'])
-    expect(result.biography.epithet).toBe('The Party Correspondent Who Keeps the People in the Room')
+    expect(result.themes.map((theme) => theme.label)).toEqual(['Celebrations', 'Diagrams', 'Friends and family'])
+    expect(result.biography.epithet).toBe('The Party Correspondent Who Saves Diagrams for Later')
     expect(result.biography.epithet).not.toMatch(JUNK)
     expect(JSON.stringify(result.biography)).not.toMatch(JUNK)
     expect(result.records.map((record) => record.text).join(' ')).not.toMatch(JUNK)
@@ -90,7 +106,8 @@ describe('theme labels', () => {
       { perceive: async () => new Map(), runDate: '2026-02-08T00:00:00.000Z' },
     )
     expect(result.meta.grouping).toBe('lexical')
-    expect(result.themes.map((theme) => theme.label).sort()).toEqual(['Recipes', 'no words, just vibes'])
+    expect(result.records.find((record) => record.id === 'n1')?.themeId).toBe('other')
+    expect(result.themes.map((theme) => theme.label)).toEqual(['Recipes'])
     expect(JSON.stringify(result.themes)).not.toMatch(JUNK)
     expect(result.biography.epithet).toBe('The Recipe Hoarder')
   })

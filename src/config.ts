@@ -4,5 +4,5 @@ export const APP_URL = 'https://mlescaille.com/lore'
 
 export const MAX_SHOTS = 500
 
-export const THEME_COLORS = ['#ff2bd6', '#ffe600', '#c6ff00', '#00e5ff', '#ff5a00', '#0033ff']
-export const VIBES_COLOR = '#ff2bd6'
+export const THEME_COLORS = ['#a33b24', '#163e48', '#f0b429']
+export const VIBES_COLOR = '#163e48'
