@@ -36,6 +36,7 @@ export default function App() {
           )}
         </div>
       </header>
+      <div className="reading">
       <main className="shell" ref={heading} tabIndex={-1}>
         {phase.type === 'landing' && (
           <Landing
@@ -101,6 +102,7 @@ export default function App() {
           </section>
         )}
       </main>
+      </div>
       <Footer />
       <Dialog open={session.confirming} onOpenChange={session.setConfirming}>
         <DialogContent>

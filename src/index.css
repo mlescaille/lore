@@ -23,10 +23,10 @@
 }
 
 * { box-sizing: border-box; }
-html, body, #root { min-height: 100%; }
+html, body, #root { height: 100%; }
 body {
   margin: 0;
-  overflow-x: hidden;
+  overflow: hidden;
   background-color: var(--desk);
   background-image:
     linear-gradient(45deg, var(--dither) 25%, transparent 25%),
@@ -52,17 +52,26 @@ button, input, summary { font: inherit; }
 }
 a { color: inherit; }
 
-.app { min-height: 100dvh; display: flex; flex-direction: column; }
+.app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .shell {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
 }
-main.shell { flex: 1; padding: 18px 0 40px; outline: none; }
+.reading {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+main.shell { padding: 18px 0 40px; outline: none; }
 main.shell:focus { outline: none; }
 
 .mast {
-  position: sticky;
-  top: 0;
+  flex: none;
   z-index: 20;
   background: var(--grape);
   border-bottom: 4px solid var(--butter);
@@ -626,6 +635,7 @@ input[type="date"].field { color-scheme: light; }
   height: 0;
   overflow: hidden;
   pointer-events: none;
+  z-index: -1;
 }
 .share-desktop { display: none; gap: 10px; flex-wrap: wrap; }
 @media (hover: hover) and (pointer: fine) {
@@ -640,7 +650,7 @@ input[type="date"].field { color-scheme: light; }
 }
 .keep-row .fine { max-width: 40rem; }
 
-.site-footer { padding: 8px 0 calc(16px + env(safe-area-inset-bottom)); }
+.site-footer { flex: none; padding: 8px 0 calc(16px + env(safe-area-inset-bottom)); }
 .footer-bar {
   display: flex;
   align-items: center;

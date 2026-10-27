@@ -33,13 +33,27 @@ const PIXEL = 'Silkscreen, ui-monospace, monospace'
 const DISPLAY = 'Bungee, Impact, sans-serif'
 const BODY = '"Atkinson Hyperlegible", sans-serif'
 
+/** Display size for the epithet. Longer lines step down so they wrap on words. */
+export function epithetFontSize(epithet: string, story: boolean): number {
+  const length = epithet.length
+  if (story) {
+    if (length > 90) return 40
+    if (length > 64) return 48
+    if (length > 42) return 56
+    return 64
+  }
+  if (length > 90) return 26
+  if (length > 64) return 30
+  if (length > 42) return 34
+  return 42
+}
+
 export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<HTMLDivElement> }) {
   const story = model.size === 'story'
   const hits = model.guesses.filter((guess) => guess.matched).length
   const rare = hits === model.guesses.length && hits > 0
   const stats = model.themes.slice(0, 3)
-  const long = model.epithet.length > 42
-  const epithetSize = story ? (long ? 52 : 64) : long ? 34 : 42
+  const epithetSize = epithetFontSize(model.epithet, story)
   const outer = story ? 1920 : 1080
   const pad = story ? 40 : 28
   const articleH = outer - pad * 2
@@ -110,10 +124,11 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
               fontFamily: DISPLAY,
               fontWeight: 400,
               fontSize: epithetSize,
-              lineHeight: 1.12,
+              lineHeight: 1.16,
               letterSpacing: '0.01em',
               textTransform: 'uppercase',
-              overflowWrap: 'anywhere',
+              textWrap: 'balance',
+              overflowWrap: 'break-word',
             }}
           >
             {model.epithet}

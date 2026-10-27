@@ -11,7 +11,7 @@ Nothing is uploaded. The page never sends screenshot bytes, OCR text, or guesses
 What does leave the device, and only if you ask:
 
 - The first time you read **your own** screenshots, the text reader downloads an English language file from a CDN (jsDelivr, tesseract.js). After that it stays in the browser cache.
-- The first time you read your own pictures, a small vision model downloads once from Hugging Face (`Xenova/mobileclip_s0`, about 90 MB) and runs locally. A progress bar on the installer shows the download. It is how Lore can name a photo that has little or no text. If it cannot load, themes fall back to cleaned words. The sample set never downloads it.
+- The first time you read your own pictures, a small vision model downloads once from Hugging Face (`Xenova/mobileclip_s0`, about 90 MB) and runs locally. A progress bar on the installer shows the download. It is how Lore can name a photo that has little or no text. If it cannot load, themes fall back to cleaned words. The sample set never downloads it. That model runs in the page (`onnxruntime-web`). It does not use `onnxruntime-node` or `sharp`, so `npm ci` skipping install scripts (`npm install-scripts ls`) does not affect the dev server or the browser build. Those scripts only fetch a native binary for Node, or print a notice.
 - If the small meaning model can load, it downloads once from Hugging Face (`onnx-community/all-MiniLM-L6-v2-ONNX`) and runs locally, only to score your guess against the theme names. If it cannot, the guess is scored by word overlap instead.
 - Sharing opens X or LinkedIn with a caption made only of the epithet and a link. The card image is a download, not an upload. The caption never includes screenshot text.
 
