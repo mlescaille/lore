@@ -33,6 +33,17 @@ const PIXEL = 'Silkscreen, ui-monospace, monospace'
 const DISPLAY = 'Bungee, Impact, sans-serif'
 const BODY = '"Atkinson Hyperlegible", sans-serif'
 
+const INK = '#14081c'
+const PAPER = '#fbf7ff'
+const STRIPE = '#e4d2fb'
+const ROW = '#f6efff'
+const CHROME = '#2a0c48'
+const BUTTER = '#ffe14a'
+const AQUA = '#8ff6ea'
+const CREAM = '#fffdf8'
+const DECK = ['#ff4fa3', BUTTER, AQUA, CHROME]
+const STATS = ['HP', 'ATK', 'DEF']
+
 /** Display size for the epithet. Longer lines step down so they wrap on words. */
 export function epithetFontSize(epithet: string, story: boolean): number {
   const length = epithet.length
@@ -55,18 +66,27 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
   const stats = model.themes.slice(0, 3)
   const epithetSize = epithetFontSize(model.epithet, story)
   const outer = story ? 1920 : 1080
-  const pad = story ? 40 : 28
-  const articleH = outer - pad * 2
-  const titleH = story ? 58 : 46
-  const flavorH = story ? 210 : 148
-  const contentH = articleH - 12 - titleH - flavorH
+  const pad = story ? 36 : 28
+  const headerH = story ? 88 : 76
+  const flavorH = story ? 268 : 212
+  const rows = [...stats.map((theme, index) => ({
+    key: theme.label,
+    stat: STATS[index] ?? 'XP',
+    label: theme.label,
+    value: Math.max(1, Math.round(theme.share * model.total)),
+    color: theme.color,
+  }))]
+  if (!story) {
+    rows.push({ key: 'shots', stat: 'SHOTS', label: 'Kept in the record', value: model.total, color: BUTTER })
+  }
+  const maxValue = Math.max(...rows.map((row) => row.value), 1)
 
   const shell: CSSProperties = {
     width: 1080,
     height: outer,
     boxSizing: 'border-box',
     overflow: 'hidden',
-    background: '#24143f',
+    background: '#1a062e',
     padding: pad,
     display: 'flex',
   }
@@ -76,51 +96,86 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
       <article
         style={{
           width: '100%',
-          height: articleH,
+          height: '100%',
           boxSizing: 'border-box',
-          background: '#efe4ff',
-          color: '#1a1028',
-          borderTop: '6px solid #fff6ff',
-          borderLeft: '6px solid #fff6ff',
-          borderBottom: '6px solid #3a2260',
-          borderRight: '6px solid #3a2260',
-          boxShadow: story ? '16px 16px 0 #120a22' : '12px 12px 0 #120a22',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          background: PAPER,
+          color: INK,
+          borderTop: '6px solid #fffdf8',
+          borderLeft: '6px solid #fffdf8',
+          borderBottom: '6px solid #1a062e',
+          borderRight: '6px solid #1a062e',
+          boxShadow: story ? '16px 16px 0 #0c0614' : '12px 12px 0 #0c0614',
         }}
       >
         <header
           style={{
-            height: titleH,
+            height: headerH,
+            flex: 'none',
             boxSizing: 'border-box',
-            background: '#4b1d78',
-            color: '#ffe14a',
+            background: CHROME,
+            color: BUTTER,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            gap: 12,
-            padding: story ? '0 22px' : '0 16px',
+            gap: 16,
+            padding: story ? '0 28px' : '0 22px',
+            borderBottom: '5px solid ' + BUTTER,
             fontFamily: PIXEL,
-            fontSize: story ? 20 : 16,
+            fontSize: story ? 24 : 20,
+            lineHeight: 1,
+            letterSpacing: '0.04em',
           }}
         >
           <span>LORE CARD</span>
-          <span style={{ background: '#67f2e4', color: '#1a1028', padding: story ? '6px 10px' : '4px 8px' }}>
+          <span
+            style={{
+              background: AQUA,
+              color: INK,
+              padding: story ? '10px 16px' : '8px 12px',
+              fontSize: story ? 20 : 18,
+              borderTop: '3px solid #fff',
+              borderLeft: '3px solid #fff',
+              borderBottom: '3px solid #0e6e64',
+              borderRight: '3px solid #0e6e64',
+            }}
+          >
             {rare ? 'RARE' : 'COMMON'}
           </span>
         </header>
         <div
           style={{
-            height: contentH,
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: story ? 22 : 16,
             boxSizing: 'border-box',
             overflow: 'hidden',
-            padding: story ? '32px 40px 12px' : '20px 24px 8px',
+            padding: story ? '32px 40px 28px' : '22px 28px 18px',
           }}
         >
-          <p style={{ margin: 0, fontFamily: PIXEL, fontSize: story ? 18 : 14, color: '#4b1d78' }}>
-            {model.rangeLabel.toUpperCase()}
+          <p
+            style={{
+              margin: 0,
+              flex: 'none',
+              fontFamily: BODY,
+              fontSize: story ? 22 : 18,
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              lineHeight: 1.3,
+              color: INK,
+            }}
+          >
+            {model.rangeLabel}
           </p>
           <h2
             style={{
-              margin: story ? '16px 0 0' : '12px 0 0',
+              margin: 0,
+              flex: 'none',
               fontFamily: DISPLAY,
               fontWeight: 400,
               fontSize: epithetSize,
@@ -129,87 +184,195 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
               textTransform: 'uppercase',
               textWrap: 'balance',
               overflowWrap: 'break-word',
+              color: INK,
             }}
           >
             {model.epithet}
           </h2>
-          <div style={{ display: 'flex', gap: 8, marginTop: story ? 20 : 14 }}>
-            {['#ff4fa3', '#ffe14a', '#67f2e4', '#4b1d78'].map((color) => (
-              <span
-                key={color}
-                style={{
-                  width: story ? 26 : 16,
-                  height: story ? 26 : 16,
-                  background: color,
-                  border: '2px solid #1a1028',
-                }}
-              />
+          <div
+            style={{
+              flex: 'none',
+              display: 'flex',
+              height: story ? 36 : 28,
+              border: '4px solid ' + INK,
+            }}
+          >
+            {DECK.map((color) => (
+              <span key={color} style={{ flex: 1, background: color }} />
             ))}
           </div>
           {story && (
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginTop: 28 }}>
-              <span style={{ fontFamily: DISPLAY, fontSize: 112, lineHeight: 0.85, color: '#4b1d78' }}>{model.total}</span>
-              <span style={{ fontFamily: PIXEL, fontSize: 18, paddingBottom: 10 }}>SHOTS KEPT</span>
+            <div
+              style={{
+                flex: 'none',
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: 18,
+                background: STRIPE,
+                borderTop: '3px solid #fff',
+                borderLeft: '3px solid #fff',
+                borderBottom: '3px solid #4a2878',
+                borderRight: '3px solid #4a2878',
+                padding: '12px 18px',
+              }}
+            >
+              <span style={{ fontFamily: DISPLAY, fontSize: 88, lineHeight: 0.85, color: CHROME }}>{model.total}</span>
+              <span style={{ fontFamily: BODY, fontSize: 24, fontWeight: 700, paddingBottom: 8, color: INK }}>shots kept</span>
             </div>
           )}
-          <div style={{ marginTop: story ? 28 : 18, display: 'flex', flexDirection: 'column', gap: story ? 12 : 8 }}>
-            {stats.map((theme, index) => (
+          <div
+            style={{
+              flex: story ? 'none' : 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: story ? 12 : 10,
+            }}
+          >
+            {rows.map((row, index) => (
               <div
-                key={theme.label}
+                key={row.key}
                 style={{
+                  flex: story ? 'none' : 1,
+                  minHeight: story ? 0 : 108,
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 12,
-                  background: index % 2 ? '#f7f1ff' : '#e2d2ff',
+                  alignItems: 'stretch',
+                  gap: story ? 16 : 12,
+                  background: index % 2 ? ROW : STRIPE,
                   borderTop: '3px solid #fff',
                   borderLeft: '3px solid #fff',
-                  borderBottom: '3px solid #6b4a96',
-                  borderRight: '3px solid #6b4a96',
-                  padding: story ? '12px 14px' : '8px 10px',
+                  borderBottom: '3px solid #4a2878',
+                  borderRight: '3px solid #4a2878',
+                  padding: story ? '12px 16px' : '10px 14px',
                 }}
               >
-                <span style={{ fontFamily: PIXEL, fontSize: story ? 18 : 14, flex: 'none' }}>
-                  {['HP', 'ATK', 'DEF'][index] ?? 'XP'}
-                </span>
                 <span
                   style={{
-                    fontFamily: BODY,
-                    fontSize: story ? 26 : 18,
-                    fontWeight: 700,
-                    textAlign: 'right',
-                    lineHeight: 1.25,
+                    width: story ? 16 : 14,
+                    alignSelf: 'stretch',
+                    background: row.color,
+                    border: '2px solid ' + INK,
+                    flex: 'none',
                   }}
-                >
-                  {theme.label}{' '}
-                  <span style={{ fontFamily: PIXEL, fontWeight: 400, fontSize: story ? 18 : 14 }}>
-                    {Math.max(1, Math.round(theme.share * model.total))}
-                  </span>
-                </span>
+                />
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: story ? 10 : 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span
+                      style={{
+                        fontFamily: PIXEL,
+                        fontSize: story ? 20 : 18,
+                        lineHeight: 1,
+                        flex: 'none',
+                        width: story ? 112 : 96,
+                        color: INK,
+                      }}
+                    >
+                      {row.stat}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: BODY,
+                        fontSize: story ? 28 : 24,
+                        fontWeight: 700,
+                        lineHeight: 1.15,
+                        flex: 1,
+                        minWidth: 0,
+                        color: INK,
+                      }}
+                    >
+                      {row.label}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: DISPLAY,
+                        fontSize: story ? 48 : 40,
+                        lineHeight: 1,
+                        flex: 'none',
+                        color: CHROME,
+                      }}
+                    >
+                      {row.value}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: story ? 28 : 24,
+                      boxSizing: 'border-box',
+                      background: CHROME,
+                      borderTop: '3px solid #1a062e',
+                      borderLeft: '3px solid #1a062e',
+                      borderBottom: '3px solid #fff',
+                      borderRight: '3px solid #fff',
+                      padding: 3,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${Math.max(10, Math.round((row.value / maxValue) * 100))}%`,
+                        height: '100%',
+                        background: row.color,
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             ))}
-            {!story && (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontFamily: PIXEL,
-                  fontSize: 14,
-                  padding: '4px 4px 0',
-                }}
-              >
-                <span>SHOTS</span>
-                <span>{model.total}</span>
-              </div>
-            )}
           </div>
           {story && model.eras.length > 0 && (
-            <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p style={{ margin: 0, fontFamily: PIXEL, fontSize: 16, color: '#4b1d78' }}>CHAPTERS</p>
+            <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ margin: 0, fontFamily: BODY, fontSize: 20, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: INK }}>
+                Chapters
+              </p>
               {model.eras.slice(0, 4).map((era) => (
                 <div key={era.label} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <span style={{ width: 18, height: 18, background: era.color, border: '2px solid #1a1028', flex: 'none' }} />
-                  <span style={{ fontFamily: BODY, fontSize: 24, fontWeight: 700, lineHeight: 1.3 }}>{era.label}</span>
+                  <span style={{ width: 18, height: 18, background: era.color, border: '2px solid ' + INK, flex: 'none' }} />
+                  <span style={{ fontFamily: BODY, fontSize: 24, fontWeight: 700, lineHeight: 1.3, color: INK }}>{era.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {story && model.guesses.length > 0 && (
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ margin: 0, flex: 'none', fontFamily: BODY, fontSize: 20, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: INK }}>
+                Your guess
+              </p>
+              {model.guesses.map((guess) => (
+                <div
+                  key={guess.guess}
+                  style={{
+                    flex: 1,
+                    minHeight: 64,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                    background: guess.matched ? '#e7fff8' : '#ffe4f1',
+                    borderTop: '3px solid #fff',
+                    borderLeft: '3px solid #fff',
+                    borderBottom: '3px solid #4a2878',
+                    borderRight: '3px solid #4a2878',
+                    padding: '8px 16px',
+                  }}
+                >
+                  <span
+                    style={{
+                      flex: 'none',
+                      fontFamily: PIXEL,
+                      fontSize: 16,
+                      lineHeight: 1,
+                      color: guess.matched ? INK : CREAM,
+                      background: guess.matched ? AQUA : '#8d1248',
+                      border: '3px solid ' + INK,
+                      padding: '10px 12px',
+                    }}
+                  >
+                    {guess.matched ? 'HIT' : 'MISS'}
+                  </span>
+                  <span style={{ fontFamily: BODY, fontSize: 28, fontWeight: 700, lineHeight: 1.2, color: INK }}>{guess.guess}</span>
+                  {guess.matched && guess.matchLabel && (
+                    <span style={{ marginLeft: 'auto', fontFamily: BODY, fontSize: 22, fontWeight: 700, lineHeight: 1.2, color: INK, textAlign: 'right' }}>
+                      {guess.matchLabel}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -218,30 +381,45 @@ export function CardFace({ model, nodeRef }: { model: CardModel; nodeRef?: Ref<H
         <div
           style={{
             height: flavorH,
+            flex: 'none',
             boxSizing: 'border-box',
-            margin: story ? '0 40px' : '0 24px',
-            background: '#1a1028',
-            color: '#67f2e4',
-            padding: story ? '18px 18px' : '12px 12px',
+            background: INK,
+            color: CREAM,
+            padding: story ? '28px 40px' : '22px 28px',
+            borderTop: '6px solid ' + BUTTER,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: story ? 16 : 12,
             overflow: 'hidden',
           }}
         >
+          <p
+            style={{
+              margin: 0,
+              fontFamily: BODY,
+              fontSize: story ? 34 : 28,
+              lineHeight: 1.35,
+              fontWeight: 700,
+              color: CREAM,
+            }}
+          >
+            {model.closingLine}
+          </p>
+          {model.guesses.length > 0 && (
             <p
               style={{
                 margin: 0,
                 fontFamily: BODY,
-                fontSize: story ? 28 : 20,
-                lineHeight: 1.35,
+                fontSize: story ? 24 : 20,
+                lineHeight: 1.4,
                 fontWeight: 700,
+                color: BUTTER,
               }}
             >
-              {model.closingLine}
+              Guessed {model.guesses.map((guess) => guess.guess).join(', ')}
             </p>
-            {model.guesses.length > 0 && (
-              <p style={{ margin: story ? '12px 0 0' : '8px 0 0', fontFamily: PIXEL, fontSize: story ? 16 : 13, lineHeight: 1.5 }}>
-                GUESS: {model.guesses.map((guess) => guess.guess).join(', ').toUpperCase()}
-              </p>
-            )}
+          )}
         </div>
       </article>
     </div>
