@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { filesFromDataTransfer } from '../pipeline/drop.ts'
 import type { SavedReading } from '../storage/idb.ts'
-import { TitleBar } from './Window.tsx'
 
 const ACCEPT = 'image/png,image/jpeg,image/heic,image/heif,.heic,.heif,.jpg,.jpeg,.png'
 
@@ -22,7 +21,7 @@ export function Landing({
 
   return (
     <div
-      className={dragging ? 'stage is-dragging' : 'stage'}
+      className={dragging ? 'welcome is-dragging' : 'welcome'}
       onDragEnter={(event) => {
         if (![...event.dataTransfer.types].includes('Files')) return
         event.preventDefault()
@@ -42,57 +41,56 @@ export function Landing({
         void filesFromDataTransfer(event.dataTransfer).then(onFiles)
       }}
     >
-      <section className="win setup">
-        <TitleBar title="LORE" />
-        <div className="win-body">
-          <h1 className="pixel-title">Drop in your screenshots</h1>
-          <p className="body">Lore finds what you keep saving, then shows you a short portrait of you.</p>
-          {saved && (
-            <div className="saved-row">
-              <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenSaved}>
-                Open your last reading
-              </button>
-              <button type="button" className="btn btn-quiet btn-sm" onClick={onForgetSaved}>
-                Forget it
-              </button>
-            </div>
-          )}
-          <div className="roll-actions">
-            <label className="roll-primary">
-              <span>Choose screenshots</span>
-              <input
-                type="file"
-                accept={ACCEPT}
-                multiple
-                onChange={(event) => {
-                  const list = event.target.files
-                  if (list && list.length > 0) onFiles([...list])
-                  event.target.value = ''
-                }}
-              />
-            </label>
-            <button type="button" className="roll-sample" onClick={onSample}>
-              Try the sample
-            </button>
-            <label className="roll-folder">
-              <span>or a folder</span>
-              <input
-                type="file"
-                multiple
-                ref={(node) => {
-                  if (node) node.setAttribute('webkitdirectory', '')
-                }}
-                onChange={(event) => {
-                  const list = event.target.files
-                  if (list && list.length > 0) onFiles([...list])
-                  event.target.value = ''
-                }}
-              />
-            </label>
-          </div>
-          <p className="fine">Nothing is uploaded. Pictures that look private are skipped.</p>
+      <h1 className="welcome-title">Welcome to Lore</h1>
+      <p className="welcome-lead">
+        Lore turns your screenshots into a short <mark>portrait</mark> of what you care about.
+      </p>
+      <p className="body">Everything stays on your computer. Nothing is uploaded.</p>
+      {saved && (
+        <div className="saved-row">
+          <button type="button" className="btn" onClick={onOpenSaved}>
+            Open your last reading
+          </button>
+          <button type="button" className="btn" onClick={onForgetSaved}>
+            Forget it
+          </button>
         </div>
-      </section>
+      )}
+      <div className="welcome-actions">
+        <label className="btn btn-primary roll-primary">
+          <span>Start with my screenshots</span>
+          <input
+            id="shot-files"
+            type="file"
+            accept={ACCEPT}
+            multiple
+            onChange={(event) => {
+              const list = event.target.files
+              if (list && list.length > 0) onFiles([...list])
+              event.target.value = ''
+            }}
+          />
+        </label>
+        <button type="button" className="btn" onClick={onSample}>
+          Try sample screenshots
+        </button>
+        <label className="btn roll-folder">
+          <span>Choose a folder</span>
+          <input
+            type="file"
+            multiple
+            ref={(node) => {
+              if (node) node.setAttribute('webkitdirectory', '')
+            }}
+            onChange={(event) => {
+              const list = event.target.files
+              if (list && list.length > 0) onFiles([...list])
+              event.target.value = ''
+            }}
+          />
+        </label>
+      </div>
+      <p className="fine">Or drop screenshots here. Pictures that look private are skipped.</p>
       {dragging && <div className="drop-veil">Drop your screenshots</div>}
     </div>
   )

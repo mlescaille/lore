@@ -5,7 +5,6 @@ import { downloadJson } from '../share/export.ts'
 import type { RevealModel } from '../useSession.ts'
 import { BiographyStage } from './BiographyStage.tsx'
 import { ScorePanel } from './ScorePanel.tsx'
-import { TitleBar } from './Window.tsx'
 import { Button } from './ui/button.tsx'
 
 export function Reveal({
@@ -28,10 +27,8 @@ export function Reveal({
 
   return (
     <div className="reveal">
-      <section className="win lore-result">
-        <TitleBar title="LORE" />
-        <div className="win-body">
-          <h1 className="pixel-title">Your lore</h1>
+      <section className="lore-result">
+          <h1 className="pane-title">Your lore</h1>
           {empty ? (
             <p className="body">Everything in this set looked private, so there is no portrait. That is on purpose.</p>
           ) : (
@@ -71,14 +68,11 @@ export function Reveal({
           {result.meta.grouping === 'lexical' && model.kind === 'own' && (
             <p className="fine">Read from the words in the pictures this time. Nothing was uploaded.</p>
           )}
-        </div>
       </section>
       <ScorePanel score={score} />
       {!empty && <BiographyStage result={result} />}
-      <section className="win keep-row">
-        <TitleBar title="LORE" />
-        <div className="win-body">
-          <h2 className="pixel-title">On this device</h2>
+      <section className="keep-row">
+          <h2 className="pane-title">On this device</h2>
           <p className="body">Save the reading here, or start over. Your screenshot files stay where they were.</p>
           <label className="switch">
             <input type="checkbox" checked={model.kept} onChange={(event) => onKeep(event.target.checked)} />
@@ -92,7 +86,6 @@ export function Reveal({
               Start over
             </Button>
           </div>
-        </div>
       </section>
     </div>
   )

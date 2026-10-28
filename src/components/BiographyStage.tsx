@@ -5,7 +5,6 @@ import { buildCaption, cardToBlob, downloadBlob, shareCard } from '../share/expo
 import { formatRange } from '../lib/format.ts'
 import type { LoreResult } from '../types.ts'
 import { CardFace, type CardModel } from './CardFace.tsx'
-import { TitleBar } from './Window.tsx'
 import { Button } from './ui/button.tsx'
 
 function modelFor(result: LoreResult, size: 'square' | 'story'): CardModel {
@@ -71,10 +70,8 @@ export function BiographyStage({ result }: { result: LoreResult }) {
   }
 
   return (
-    <section className="win card-stage">
-      <TitleBar title="LORE" />
-      <div className="win-body">
-        <h2 className="pixel-title">Share it</h2>
+    <section className="card-stage">
+        <h2 className="pane-title">Share it</h2>
         <p className="body">Download a picture of your lore. It does not include your screenshots.</p>
         <div className="segmented" role="group" aria-label="Picture shape">
           <button type="button" className={size === 'square' ? 'is-on' : ''} onClick={() => setSize('square')}>
@@ -126,7 +123,6 @@ export function BiographyStage({ result }: { result: LoreResult }) {
         </div>
         {notice && <p className="note">{notice}</p>}
         <p className="caption-preview">{caption}</p>
-      </div>
     </section>
   )
 }

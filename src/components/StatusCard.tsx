@@ -1,5 +1,3 @@
-import { TitleBar } from './Window.tsx'
-
 export function StatusCard({
   title,
   detail,
@@ -17,25 +15,22 @@ export function StatusCard({
   const moving = indeterminate || (pct > 0 && pct < 100)
   const showCount = !indeterminate && total > 0 && total !== 100
   return (
-    <section className="win status-card" aria-live="polite" aria-busy={indeterminate || pct < 100}>
-      <TitleBar title="LORE" />
-      <div className="win-body">
-        <h1 className="pixel-title">{title}</h1>
-        {detail && <p className="body">{detail}</p>}
-        <div
-          className={indeterminate ? 'install-bar is-indet' : moving ? 'install-bar is-live' : 'install-bar'}
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={indeterminate ? undefined : total || 1}
-          aria-valuenow={indeterminate ? undefined : Math.min(done, total || 1)}
-          aria-label={title}
-        >
-          <span style={{ width: `${pct}%` }}>
-            <i />
-          </span>
-        </div>
-        {showCount && <p className="meter-count">{Math.min(done, total)} of {total}</p>}
+    <section className="status-card" aria-live="polite" aria-busy={indeterminate || pct < 100}>
+      <h1 className="pane-title">{title}</h1>
+      {detail && <p className="body">{detail}</p>}
+      <div
+        className={indeterminate ? 'install-bar is-indet' : moving ? 'install-bar is-live' : 'install-bar'}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={indeterminate ? undefined : total || 1}
+        aria-valuenow={indeterminate ? undefined : Math.min(done, total || 1)}
+        aria-label={title}
+      >
+        <span style={{ width: `${pct}%` }}>
+          <i />
+        </span>
       </div>
+      {showCount && <p className="meter-count">{Math.min(done, total)} of {total}</p>}
     </section>
   )
 }
