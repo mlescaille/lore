@@ -10,6 +10,7 @@ function loadExtractor(): Promise<Extractor> {
     extractorPromise = (async () => {
       const { pipeline, env } = await import('@huggingface/transformers')
       env.allowLocalModels = false
+      if (typeof caches !== 'undefined') env.useBrowserCache = true
       const extractor = await pipeline('feature-extraction', 'onnx-community/all-MiniLM-L6-v2-ONNX', {
         dtype: 'q8',
       })

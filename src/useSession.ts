@@ -104,18 +104,6 @@ export function useSession() {
   }, [])
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void import('./pipeline/vision.ts')
-        .then(({ preloadVision }) => preloadVision())
-        .catch((error) => console.error('Lore failed during model', error))
-      void import('./pipeline/embed.ts')
-        .then(({ preloadEmbed }) => preloadEmbed())
-        .catch((error) => console.error('Lore failed during model', error))
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
     const titles: Record<Phase['type'], string> = {
       landing: 'Lore — Discover your lore',
       preparing: 'Lore — Reading the roll',
@@ -273,51 +261,27 @@ export function useSession() {
           report({ label: sentence, done, total })
           paint(kind, done, total)
         }
-        void import('./pipeline/vision.ts')
-          .then(({ preloadVision }) =>
-            preloadVision((loaded, total) => {
-              if (!alive() || total <= 0 || loaded >= total) return
-              say('model', Math.min(100, Math.round((loaded / total) * 100)), 100)
-            }),
-          )
-          .catch((error) => console.error('Lore failed during model', error))
-        const { recognizeAll } = await import('./pipeline/ocr.ts')
-        const concurrency = navigator.hardwareConcurrency > 4 ? 3 : 2
-        const recognized = await recognizeAll(
-          files.map((file) => ({ id: file.id, blob: file.blob })),
-          (done, total) => say('words', done, total),
-          concurrency,
+        const { readRoll } = await import('./pipeline/readRoll.ts')
+        let wordDone = 0
+        let pictureDone = 0
+        const reading = await readRoll(files, {
           alive,
-        )
-        if (!alive()) return null as unknown as CachedLore
-        const textOf = new Map(recognized.map((item) => [item.id, item]))
-        const shots: InputShot[] = files.map((file) => {
-          const read = textOf.get(file.id)
-          return {
-            id: file.id,
-            timestamp: file.timestamp,
-            timestampSource: file.timestampSource,
-            text: read?.cleanText ?? '',
-            sensitiveText: read?.text ?? '',
-          }
-        })
-        job.current = { kind: 'own', note, shots }
-        const { classifyImages } = await import('./pipeline/vision.ts')
-        say('pictures', 0, files.length)
-        const visual = await classifyImages(
-          files.map((file) => ({ id: file.id, blob: file.blob })),
-          {
-            shouldContinue: alive,
-            onImage: (done, total) => say('pictures', done, total),
+          onDownload: (loaded, total) => {
+            if (!alive() || total <= 0 || loaded >= total) return
+            say('model', Math.min(99, Math.round((loaded / total) * 100)), 100)
           },
-        )
-        if (!alive()) return null as unknown as CachedLore
-        await new Promise((resolve) => setTimeout(resolve, 0))
-        const result = await analyzeShots(shots, {
-          perceive: async () => visual,
-          runDate: new Date().toISOString(),
+          onWords: (done, total) => {
+            wordDone = done
+            if (wordDone >= pictureDone) say('words', wordDone, total)
+          },
+          onPictures: (done, total) => {
+            pictureDone = done
+            if (pictureDone >= wordDone) say('pictures', pictureDone, total)
+          },
         })
-        return { result, visual, shots }
+        if (!alive() || !reading) return null as unknown as CachedLore
+        job.current = { kind: 'own', note, shots: reading.shots }
+        return reading
       })
       loreRun.current = run
       run.start()

@@ -5,6 +5,9 @@ import '@fontsource/atkinson-hyperlegible/latin-700.css'
 import '@fontsource/silkscreen/latin-700.css'
 import './index.css'
 import App from './App.tsx'
+import { bootModels } from './pipeline/boot.ts'
+
+bootModels()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

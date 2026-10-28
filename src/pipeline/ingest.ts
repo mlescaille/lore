@@ -1,4 +1,5 @@
 import { dateFromExif, resolveTimestamp, type TimestampSource } from './timestamps.ts'
+import { timed } from './timing.ts'
 
 export interface PreparedFile {
   id: string
@@ -58,9 +59,11 @@ async function fileId(file: File): Promise<string> {
 
 async function toBitmap(file: File): Promise<Blob> {
   if (!isHeic(file)) return file
-  const heic2any = (await import('heic2any')).default
-  const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.82 })
-  return Array.isArray(converted) ? converted[0] : converted
+  return timed('heic', async () => {
+    const heic2any = (await import('heic2any')).default
+    const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.82 })
+    return Array.isArray(converted) ? converted[0] : converted
+  })
 }
 
 export async function prepareFiles(
