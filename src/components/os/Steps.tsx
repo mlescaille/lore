@@ -1,5 +1,5 @@
-const TRAIL = ['Step 1 of 3: Add screenshots', 'Step 2: Guess', 'Step 3: Your lore']
-const FULL = ['Step 1 of 3: Add screenshots', 'Step 2 of 3: Guess', 'Step 3 of 3: Your lore']
+const TRAIL = ['Step 1 of 3: Add screenshots', 'Step 2: Guess (optional)', 'Step 3: Your lore']
+const FULL = ['Step 1 of 3: Add screenshots', 'Step 2 of 3: Guess (optional)', 'Step 3 of 3: Your lore']
 
 export function Steps({ current }: { current: 1 | 2 | 3 }) {
   return (

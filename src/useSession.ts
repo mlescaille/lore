@@ -5,7 +5,7 @@ import { closingForScore } from './pipeline/biography.ts'
 import { filesFromDataTransfer } from './pipeline/drop.ts'
 import { prepareFiles, type PreparedFile } from './pipeline/ingest.ts'
 import { parseBlocklist } from './pipeline/exclusion.ts'
-import { assignMatches, scoreGuessesLexically, vectorMatrix, type ScoreResult } from './pipeline/scoring.ts'
+import { assignMatches, hasGuess, scoreGuessesLexically, vectorMatrix, type ScoreResult } from './pipeline/scoring.ts'
 import { SAMPLE_SHOTS, sampleText } from './sample/manifest.ts'
 import { sampleImageUrl } from './sample/images.ts'
 import { forgetAll, loadSaved, saveReading, type SavedReading } from './storage/idb.ts'
@@ -20,7 +20,7 @@ export interface Progress {
 
 export interface RevealModel {
   result: LoreResult
-  score: ScoreResult
+  score: ScoreResult | null
   guesses: string[]
   kind: 'sample' | 'own'
   note: string
@@ -31,7 +31,7 @@ export type Phase =
   | { type: 'landing' }
   | { type: 'preparing'; progress: Progress }
   | { type: 'range'; files: PreparedFile[]; note: string }
-  | { type: 'guess'; kind: 'sample' | 'own'; ready: boolean; progress: Progress; note: string; holding: boolean }
+  | { type: 'guess'; kind: 'sample' | 'own'; ready: boolean; progress: Progress; note: string; holding: boolean; picking: boolean }
   | { type: 'finishing'; label: string; detail?: string; done?: number; total?: number }
   | { type: 'reveal'; model: RevealModel }
   | { type: 'error'; message: string; step: 1 | 2 | 3 }
@@ -85,6 +85,7 @@ export function useSession() {
   const runId = useRef(0)
   const job = useRef<Job | null>(null)
   const pending = useRef<{ guesses: string[]; block: string } | null>(null)
+  const pickingRef = useRef(true)
   const readyRef = useRef(false)
   const finishing = useRef(false)
   const blobs = useRef(new Map<string, Blob>())
@@ -201,23 +202,32 @@ export function useSession() {
         runDate: new Date().toISOString(),
       })
       if (runId.current !== token) return
-      if (current.kind === 'own') {
-        setPhase({
-          type: 'finishing',
-          label: 'Loading a small meaning model. It stays on this device.',
-          detail: 'Used only to score your guess against the themes.',
-        })
-      } else {
+      if (!hasGuess(guess.guesses)) {
+        setPhase({ type: 'finishing', label: 'Writing your lore' })
+      } else if (current.kind !== 'own') {
         setPhase({ type: 'finishing', label: 'Writing the biography' })
       }
-      const score = await scoreReading(guess.guesses, result, current.kind, (done, total) => {
-        if (runId.current !== token) return
-        setPhase({ type: 'finishing', label: `Scoring the guess · ${done} of ${total}` })
-      })
+      const names = guess.guesses.map((item) => item.trim()).filter(Boolean)
+      let score: ScoreResult | null = null
+      if (hasGuess(names)) {
+        if (current.kind === 'own') {
+          setPhase({
+            type: 'finishing',
+            label: 'Loading a small meaning model. It stays on this device.',
+            detail: 'Used only to score your guess against the themes.',
+          })
+        }
+        score = await scoreReading(names, result, current.kind, (done, total) => {
+          if (runId.current !== token) return
+          setPhase({ type: 'finishing', label: `Scoring the guess · ${done} of ${total}` })
+        })
+      }
       result.biography.closingLine =
         result.records.length === 0
           ? 'The sensitive-text check kept the whole set back. Only the count remains.'
-          : closingForScore(score.matchedCount, score.guessCount)
+          : score
+            ? closingForScore(score.matchedCount, score.guessCount)
+            : 'Here is what you keep saving.'
       const keep = new Set(result.records.map((record) => record.id))
       for (const id of [...blobs.current.keys()]) if (!keep.has(id)) blobs.current.delete(id)
       for (const id of [...images.current.keys()]) if (!keep.has(id)) images.current.delete(id)
@@ -228,7 +238,7 @@ export function useSession() {
         model: {
           result,
           score,
-          guesses: guess.guesses.map((item) => item.trim()).filter(Boolean),
+          guesses: names,
           kind: current.kind,
           note: current.note,
           kept: false,
@@ -258,11 +268,13 @@ export function useSession() {
       blobs.current = new Map(files.map((file) => [file.id, file.blob]))
       images.current.clear()
       readyRef.current = false
+      pickingRef.current = !pending.current
       setPhase({
         type: 'guess',
         kind: 'own',
         ready: false,
         holding: Boolean(pending.current),
+        picking: pickingRef.current,
         progress: { label: 'Reading the words', done: 0, total: files.length },
         note,
       })
@@ -279,6 +291,7 @@ export function useSession() {
             kind: 'own',
             ready: false,
             holding: Boolean(pending.current),
+            picking: pickingRef.current,
             progress: {
               label: 'Loading the vision model',
               detail: `${formatMb(visionSnap.loaded)} of ${formatMb(visionSnap.total)}. Downloaded once, then it stays on this device.`,
@@ -294,6 +307,7 @@ export function useSession() {
           kind: 'own',
           ready: false,
           holding: Boolean(pending.current),
+          picking: pickingRef.current,
           progress: { label: 'Reading the words', done: ocrSnap.done, total: ocrSnap.total },
           note,
         })
@@ -346,6 +360,7 @@ export function useSession() {
             kind: 'own',
             ready: false,
             holding: Boolean(pending.current),
+            picking: pickingRef.current,
             progress: {
               label: 'Loading the vision model',
               detail: `${formatMb(visionSnap.loaded)} of ${formatMb(visionSnap.total)}. Downloaded once, then it stays on this device.`,
@@ -363,6 +378,7 @@ export function useSession() {
           kind: 'own',
           ready: true,
           holding: Boolean(pending.current),
+          picking: pickingRef.current,
           progress: { label: 'Ready when you are', done: files.length, total: files.length },
           note,
         })
@@ -400,11 +416,13 @@ export function useSession() {
     }))
     job.current = { kind: 'sample', shots, note: SAMPLE_NOTE }
     const total = shots.length
+    pickingRef.current = true
     setPhase({
       type: 'guess',
       kind: 'sample',
       ready: false,
       holding: false,
+      picking: true,
       progress: { label: 'Opening the sample roll', done: 0, total },
       note: SAMPLE_NOTE,
     })
@@ -416,6 +434,7 @@ export function useSession() {
         kind: 'sample',
         ready: false,
         holding: Boolean(pending.current),
+        picking: pickingRef.current,
         progress: { label: 'Opening the sample roll', done: Math.min(done, total), total },
         note: SAMPLE_NOTE,
       })
@@ -427,6 +446,7 @@ export function useSession() {
       kind: 'sample',
       ready: true,
       holding: Boolean(pending.current),
+      picking: pickingRef.current,
       progress: { label: 'Ready when you are', done: total, total },
       note: SAMPLE_NOTE,
     })
@@ -526,6 +546,20 @@ export function useSession() {
     [beginOwn],
   )
 
+  const showPicker = useCallback(() => {
+    pickingRef.current = false
+    const current = phaseRef.current
+    if (current.type === 'guess') setPhase({ ...current, picking: false })
+  }, [])
+
+  const skipGuess = useCallback(async () => {
+    pickingRef.current = false
+    pending.current = { guesses: [], block: '' }
+    const current = phaseRef.current
+    if (current.type === 'guess') setPhase({ ...current, picking: false, holding: true })
+    if (readyRef.current) await finish()
+  }, [finish])
+
   const submitGuess = useCallback(
     async (guesses: string[], block: string) => {
       pending.current = { guesses, block }
@@ -591,6 +625,7 @@ export function useSession() {
   const readAnother = useCallback(() => {
     runId.current += 1
     pending.current = null
+    pickingRef.current = true
     finishing.current = false
     readyRef.current = false
     job.current = null
@@ -603,6 +638,7 @@ export function useSession() {
   const forget = useCallback(async () => {
     runId.current += 1
     pending.current = null
+    pickingRef.current = true
     finishing.current = false
     readyRef.current = false
     job.current = null
@@ -627,6 +663,8 @@ export function useSession() {
     failOpen,
     confirmRange,
     submitGuess,
+    showPicker,
+    skipGuess,
     setKept,
     openSaved,
     readAnother,

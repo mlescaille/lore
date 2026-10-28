@@ -195,10 +195,13 @@ export default function App() {
                   kind={phase.kind}
                   ready={phase.ready}
                   holding={phase.holding}
+                  picking={phase.picking}
                   progress={phase.progress}
                   note={phase.note}
                   onSubmit={(guesses, block) => void session.submitGuess(guesses, block)}
                   onValidity={onGuessValidity}
+                  onGuess={session.showPicker}
+                  onSkip={() => void session.skipGuess()}
                 />
               )}
               {phase.type === 'finishing' && (
@@ -236,7 +239,7 @@ export default function App() {
                 <button type="button" className="btn btn-default" onClick={() => document.getElementById('shot-files')?.click()}>
                   Next
                 </button>
-              ) : phase.type === 'guess' && !phase.holding ? (
+              ) : phase.type === 'guess' && !phase.holding && !phase.picking ? (
                 <button type="submit" form="lore-guess" className="btn btn-default" disabled={!guessOk}>
                   Next
                 </button>

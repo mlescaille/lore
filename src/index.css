@@ -237,6 +237,34 @@ a { color: inherit; }
 }
 .body { margin: 12px 0 0; font-size: 1.0625rem; line-height: 1.5; color: var(--ink); }
 .fine, .note { margin: 12px 0 0; font-size: 1rem; line-height: 1.45; color: var(--ink); }
+.choice-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+  max-width: 440px;
+}
+.choice-actions .btn {
+  width: 100%;
+  min-height: 52px;
+  font-size: 18px;
+}
+.skip-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 16px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--navy);
+  font-family: var(--body);
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
 .welcome-actions, .actions, .saved-row {
   display: flex;
   flex-direction: column;

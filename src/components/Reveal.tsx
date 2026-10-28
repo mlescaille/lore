@@ -69,7 +69,7 @@ export function Reveal({
             <p className="fine">Read from the words in the pictures this time. Nothing was uploaded.</p>
           )}
       </section>
-      <ScorePanel score={score} />
+      {score && model.guesses.length > 0 && <ScorePanel score={score} />}
       {!empty && <BiographyStage result={result} />}
       <section className="keep-row">
           <h2 className="pane-title">On this device</h2>

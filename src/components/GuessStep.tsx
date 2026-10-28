@@ -8,26 +8,32 @@ const PLACEHOLDERS = ['First guess', 'Second guess', 'Third guess']
 export function GuessStep({
   ready,
   holding,
+  picking,
   progress,
   note,
   onSubmit,
   onValidity,
+  onGuess,
+  onSkip,
 }: {
   kind: 'sample' | 'own'
   ready: boolean
   holding: boolean
+  picking: boolean
   progress: Progress
   note: string
   onSubmit: (guesses: string[], block: string) => void
   onValidity?: (ok: boolean) => void
+  onGuess: () => void
+  onSkip: () => void
 }) {
   const [values, setValues] = useState(['', '', ''])
   const [block, setBlock] = useState('')
   const complete = values.every((value) => value.trim().length >= 2)
 
   useEffect(() => {
-    onValidity?.(complete && !holding)
-  }, [complete, holding, onValidity])
+    onValidity?.(complete && !holding && !picking)
+  }, [complete, holding, picking, onValidity])
 
   if (holding) {
     return (
@@ -37,6 +43,25 @@ export function GuessStep({
         done={progress.done}
         total={progress.total}
       />
+    )
+  }
+
+  if (picking) {
+    return (
+      <div className="guess-choice">
+        <h1 className="pane-title">Want to guess?</h1>
+        <p className="body">Name three themes first, or skip ahead to your portrait.</p>
+        <div className="choice-actions">
+          <button type="button" className="btn btn-primary" onClick={onGuess}>
+            Guess first
+          </button>
+          <button type="button" className="btn" onClick={onSkip}>
+            Just show me my lore
+          </button>
+        </div>
+        {note && <p className="note">{note}</p>}
+        {!ready && <p className="note">Still reading your screenshots. You can go ahead.</p>}
+      </div>
     )
   }
 
@@ -83,6 +108,9 @@ export function GuessStep({
       </label>
       {note && <p className="note">{note}</p>}
       {!ready && <p className="note">Still reading your screenshots. You can guess now.</p>}
+      <button type="button" className="skip-link" onClick={onSkip}>
+        Skip guessing
+      </button>
     </form>
   )
 }

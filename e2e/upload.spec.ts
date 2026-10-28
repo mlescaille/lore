@@ -8,6 +8,7 @@ const sharp = require('sharp') as typeof import('sharp')
 
 const root = path.resolve(import.meta.dirname, '..')
 const out = '/opt/cursor/artifacts/upload'
+const skipOut = '/opt/cursor/artifacts/skip'
 const work = path.join(root, 'e2e/.fixtures')
 
 const people = [
@@ -31,6 +32,7 @@ test.beforeAll(async () => {
   await mkdir(work, { recursive: true })
   await mkdir(path.join(work, 'folder'), { recursive: true })
   await mkdir(out, { recursive: true })
+  await mkdir(skipOut, { recursive: true })
   await writeFile(path.join(work, 'notes.txt'), 'not a picture')
   await writeFile(path.join(work, 'folder', 'notes.txt'), 'not a picture')
   const { copyFile } = await import('node:fs/promises')
@@ -47,10 +49,11 @@ async function openHome(page: Page) {
   return errors
 }
 
-async function expectGuess(page: Page) {
-  await expect(page.getByRole('heading', { name: 'Before we look' })).toBeVisible()
+async function expectChoice(page: Page) {
+  await expect(page.getByRole('button', { name: 'Guess first' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Just show me my lore' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'That didn’t finish' })).toHaveCount(0)
-  await expect(page.getByText('Step 2 of 3: Guess').first()).toBeVisible()
+  await expect(page.getByText('Guess (optional)').first()).toBeVisible()
   await expect(page.getByText("Couldn't open those pictures")).toHaveCount(0)
 }
 
@@ -64,8 +67,11 @@ test('file input reaches a portrait, including a bad file', async ({ page, brows
     page.getByText('Start with my screenshots').click(),
   ])
   await chooser.setFiles(uploads)
-  await expectGuess(page)
+  await expectChoice(page)
   await expect(page.getByText(/Skipped 1 that were not images/)).toBeVisible()
+  await page.getByRole('button', { name: 'Guess first' }).click()
+  await expect(page.getByRole('heading', { name: 'Before we look' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Skip guessing' })).toBeVisible()
   await page.screenshot({ path: path.join(out, 'guess.png') })
   await page.getByLabel('Theme 1').fill('celebrations')
   await page.getByLabel('Theme 2').fill('friends')
@@ -74,7 +80,16 @@ test('file input reaches a portrait, including a bad file', async ({ page, brows
   await expect(page.getByRole('heading', { name: 'Your lore', exact: true })).toBeVisible({ timeout: 180_000 })
   await expect(page.getByRole('heading', { name: 'That didn’t finish' })).toHaveCount(0)
   await expect(page.locator('.lore-result')).toContainText(/Celebrations|Friends and family|People|Diagrams/)
+  await expect(page.getByRole('heading', { name: 'Your guess' })).toBeVisible()
   await page.screenshot({ path: path.join(out, 'result.png') })
+  await page.evaluate(() => {
+    const scroller = document.querySelector('.lore-scroll')
+    const score = document.querySelector('.score-panel')
+    if (!scroller || !score) return
+    const top = score.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
+    scroller.scrollTop = Math.max(0, top - 16)
+  })
+  await page.screenshot({ path: path.join(skipOut, 'guessed-result.png') })
   expect(errors).toEqual([])
   const stat = await import('node:fs/promises').then((fs) => fs.stat(large))
   await writeFile(
@@ -96,13 +111,38 @@ test('Start with my screenshots accepts a photo', async ({ page }) => {
     page.getByText('Start with my screenshots').click(),
   ])
   await chooser.setFiles(people[0])
-  await expectGuess(page)
+  await expectChoice(page)
+})
+
+test('skipping the guess shows the portrait without a score', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'the full on-device model run is checked in chromium')
+  await openHome(page)
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByText('Start with my screenshots').click(),
+  ])
+  await chooser.setFiles([...people, diagram])
+  await expectChoice(page)
+  await page.screenshot({ path: path.join(skipOut, 'choice.png') })
+  await page.getByRole('button', { name: 'Just show me my lore' }).click()
+  await expect(page.getByRole('heading', { name: 'Your lore', exact: true })).toBeVisible({ timeout: 180_000 })
+  await expect(page.getByRole('heading', { name: 'Your guess' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Share it' })).toBeVisible()
+  await expect(page.locator('.lore-result')).toContainText(/Celebrations|Friends and family|People|Diagrams/)
+  await page.evaluate(() => {
+    const scroller = document.querySelector('.lore-scroll')
+    const share = document.querySelector('.card-stage')
+    if (!scroller || !share) return
+    const top = share.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
+    scroller.scrollTop = Math.max(0, top - 120)
+  })
+  await page.screenshot({ path: path.join(skipOut, 'skipped-result.png') })
 })
 
 test('a folder of pictures reaches the guess step', async ({ page }) => {
   await openHome(page)
   await page.locator('.roll-folder input').setInputFiles(path.join(work, 'folder'))
-  await expectGuess(page)
+  await expectChoice(page)
   await expect(page.getByText(/Skipped 1 that were not images/)).toBeVisible()
 })
 
@@ -120,12 +160,12 @@ test('dropping a picture reaches the guess step', async ({ page }) => {
     },
     { b64: bytes.toString('base64'), name: 'dropped.jpg' },
   )
-  await expectGuess(page)
+  await expectChoice(page)
 })
 
 test('the sample set reaches the guess step', async ({ page }) => {
   await openHome(page)
   await page.getByRole('button', { name: 'Try sample screenshots' }).click()
-  await expectGuess(page)
+  await expectChoice(page)
   await expect(page.getByText("Couldn't open those pictures")).toHaveCount(0)
 })

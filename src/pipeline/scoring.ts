@@ -125,6 +125,11 @@ export function assignMatches(guesses: string[], themes: ScoreTheme[], matrix: n
   }
 }
 
+/** True when the person typed at least one guess. A skip is not a guess. */
+export function hasGuess(guesses: string[]): boolean {
+  return guesses.some((guess) => guess.trim().length > 0)
+}
+
 /** One plain sentence for the guess. "You got 2 of 3 right." */
 export function scoreSentence(matched: number, total: number): string {
   if (total <= 0) return 'You did not make a guess.'

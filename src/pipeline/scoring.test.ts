@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cosine } from './vector.ts'
-import { assignMatches, lexicalSimilarity, scoreGuessesLexically, scoreSentence, type ScoreTheme } from './scoring.ts'
+import { assignMatches, hasGuess, lexicalSimilarity, scoreGuessesLexically, scoreSentence, type ScoreTheme } from './scoring.ts'
 
 const trip: ScoreTheme = {
   id: 'lisbon',
@@ -69,6 +69,12 @@ describe('scoring', () => {
     expect(score.matches.find((match) => match.guess === 'tech')?.matched).toBe(false)
     expect(score.matchedCount).toBe(2)
     expect(scoreSentence(score.matchedCount, score.guessCount)).toBe('You got 2 of 3 right.')
+  })
+
+  it('treats a blank or missing guess as no guess', () => {
+    expect(hasGuess([])).toBe(false)
+    expect(hasGuess(['', '  '])).toBe(false)
+    expect(hasGuess(['friends'])).toBe(true)
   })
 
   it('does not match below the threshold', () => {
