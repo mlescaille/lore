@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { APP_TITLE } from '../config.ts'
 import { filesFromDataTransfer } from '../pipeline/drop.ts'
 import type { SavedReading } from '../storage/idb.ts'
 
@@ -64,7 +65,7 @@ export function Landing({
           })
       }}
     >
-      <h1 className="welcome-title">Welcome to Lore</h1>
+      <h1 className="welcome-title">{APP_TITLE}</h1>
       <p className="welcome-lead">
         Lore turns your screenshots into a short <mark>portrait</mark> of what you care about.
       </p>

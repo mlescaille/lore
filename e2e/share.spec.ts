@@ -11,7 +11,7 @@ const secrets = ['Miso butter', 'Screenshot 2025', 'IMG_20251004', '.heic']
 
 async function reachShare(page: Page) {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Welcome to Lore' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Lore: your screenshots as your bio!' })).toBeVisible()
   await page.getByRole('button', { name: 'Try sample screenshots' }).click()
   await expect(page.getByRole('button', { name: 'Guess first' })).toBeVisible()
   await page.getByRole('button', { name: 'Guess first' }).click()
