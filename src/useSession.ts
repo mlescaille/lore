@@ -104,6 +104,19 @@ export function useSession() {
   }, [])
 
   useEffect(() => {
+    const titles: Record<Phase['type'], string> = {
+      landing: 'Lore — Discover your lore',
+      preparing: 'Lore — Reading the roll',
+      range: 'Lore — Pick a stretch',
+      guess: 'Lore — Name three themes',
+      finishing: 'Lore — Writing it up',
+      reveal: 'Lore — Your biography',
+      error: 'Lore — Try again',
+    }
+    document.title = titles[phase.type]
+  }, [phase.type])
+
+  useEffect(() => {
     const onLeave = (event: BeforeUnloadEvent) => {
       const current = phaseRef.current
       if (current.type === 'reveal' && current.model.kind === 'own' && !current.model.kept) {

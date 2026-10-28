@@ -47,7 +47,7 @@ async function openHome(page: Page) {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Lore: your screenshots as your bio!' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Welcome to Lore' })).toBeVisible()
   return errors
 }
 
