@@ -90,7 +90,7 @@ export function shareCardSvg(model: ShareCardModel): string {
   const contentW = faceW - pad * 2
   const contentTop = faceY + titleH + (story ? 36 : 28)
   const footerTop = faceY + faceH - footerH
-  const contentBottom = footerTop - 12
+  const contentBottom = footerTop - (story ? 72 : 36)
 
   let portraitSize = portraitFontSize(model.portrait, story)
   let themeSize = story ? 84 : 64
@@ -243,9 +243,9 @@ function textRun(
   const lead = Math.round(fontSize * 0.86)
   const dy = lineHeight(fontSize)
   const tspans = lines
-    .map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : dy}">${xml(line)}</tspan>`)
+    .map((line, index) => `<tspan x="${Math.round(x)}" dy="${index === 0 ? 0 : dy}">${xml(line)}</tspan>`)
     .join('')
-  return `<text x="${x}" y="${y + lead}" fill="${fill}" font-family="${SANS}" font-size="${fontSize}" font-weight="${weight}" text-anchor="${anchor}">${tspans}</text>`
+  return `<text x="${Math.round(x)}" y="${Math.round(y + lead)}" fill="${fill}" font-family="${SANS}" font-size="${fontSize}" font-weight="${weight}" text-anchor="${anchor}">${tspans}</text>`
 }
 
 function xml(text: string): string {

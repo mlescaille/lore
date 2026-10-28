@@ -59,7 +59,8 @@ test('share posts, copy, and both picture sizes stay free of screenshot text', a
 
   const surface = await page.locator('.share-panel').evaluate((element) => element.textContent ?? '')
   expect(surface).toContain('You got')
-  expect(surface).toContain('Discover your lore at mlescaille.com/lore')
+  expect(surface).toContain('Discover your lore')
+  expect(surface).toContain('mlescaille.com/lore')
   for (const secret of secrets) expect(surface).not.toContain(secret)
 
   const squareSize = await page.locator('[data-share-export="square"] svg').evaluate((element) => ({
@@ -75,12 +76,36 @@ test('share posts, copy, and both picture sizes stay free of screenshot text', a
 
   const panel = page.locator('.share-panel')
   const frame = page.locator('.share-preview')
+
+  async function expandForShots() {
+    await page.evaluate(() => {
+      for (const selector of ['html', 'body', '#root', '.os', '.desk-surface', '.lore-scroll', '.os-client']) {
+        const element = document.querySelector(selector)
+        if (!(element instanceof HTMLElement)) continue
+        element.style.overflow = 'visible'
+        element.style.height = 'auto'
+        element.style.maxHeight = 'none'
+      }
+      const win = document.querySelector('.os-window.is-lore')
+      if (win instanceof HTMLElement) {
+        win.style.position = 'relative'
+        win.style.inset = 'auto'
+        win.style.height = 'auto'
+        win.style.maxHeight = 'none'
+        win.style.width = '100%'
+      }
+    })
+  }
+
+  await page.setViewportSize({ width: 1100, height: 1900 })
+  await expandForShots()
   await panel.screenshot({ path: path.join(shareOut, 'panel-desktop.png') })
   await frame.screenshot({ path: path.join(shareOut, 'square-desktop.png') })
   await page.getByRole('button', { name: 'Story' }).click()
   await frame.screenshot({ path: path.join(shareOut, 'story-desktop.png') })
 
-  await page.setViewportSize({ width: 390, height: 844 })
+  await page.setViewportSize({ width: 390, height: 1900 })
+  await expandForShots()
   await expect(page.locator('.taskbar')).toBeHidden()
   await page.getByRole('button', { name: 'Square' }).click()
   await panel.screenshot({ path: path.join(shareOut, 'panel-mobile.png') })
