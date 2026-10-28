@@ -1,4 +1,3 @@
-import { toPng } from 'html-to-image'
 import type { LoreResult } from '../types.ts'
 
 export function toContract(result: LoreResult): LoreResult {
@@ -54,16 +53,37 @@ export function downloadJson(result: LoreResult) {
   downloadBlob(blob, 'lore-data.json')
 }
 
+/**
+ * Rasterize the card SVG itself. The pixel title and the body face are embedded
+ * in that SVG, so the saved PNG matches the preview.
+ */
 export async function cardToBlob(node: HTMLElement): Promise<Blob> {
-  const width = node.offsetWidth || Number(node.dataset.shareWidth)
-  const height = node.offsetHeight || Number(node.dataset.shareHeight)
-  const dataUrl = await toPng(node, {
-    cacheBust: true,
-    pixelRatio: 1,
-    backgroundColor: '#163e48',
-    width,
-    height,
-  })
-  const response = await fetch(dataUrl)
-  return response.blob()
+  const svg = node.querySelector('svg')
+  if (!svg) throw new Error('Card is not ready')
+  const width = Number(svg.getAttribute('width')) || node.offsetWidth || Number(node.dataset.shareWidth)
+  const height = Number(svg.getAttribute('height')) || node.offsetHeight || Number(node.dataset.shareHeight)
+  const xml = new XMLSerializer().serializeToString(svg)
+  const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }))
+  try {
+    const image = new Image()
+    const loaded = new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error('Could not draw the picture'))
+    })
+    image.src = url
+    await loaded
+    if (document.fonts?.ready) await document.fonts.ready
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Could not draw the picture')
+    context.drawImage(image, 0, 0, width, height)
+    const png = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error('Could not draw the picture'))), 'image/png')
+    })
+    return png
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }

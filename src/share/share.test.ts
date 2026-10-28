@@ -4,16 +4,24 @@ import { SHARE_URL } from '../config.ts'
 import {
   SHARE_FOOTER,
   cardPixels,
+  defaultShareSize,
+  friendlyThemeName,
   shareCardFromResult,
   shareCardSvg,
   shareSurfaceText,
 } from './card.ts'
 import {
+  LINKEDIN_COMPOSER,
+  PICTURE_COPIED,
+  PICTURE_SAVED,
   buildPostText,
   copyImage,
   copyLink,
-  linkedInIntent,
-  shareImageFile,
+  linkedInComposer,
+  pictureNotice,
+  presentLore,
+  sharePlatform,
+  shareWithFile,
   threadsIntent,
   xIntent,
 } from './post.ts'
@@ -51,8 +59,9 @@ describe('share links', () => {
     expect(threads.searchParams.get('text')).toBe(text)
     expect(threads.searchParams.get('url')).toBeNull()
 
-    const linked = linkedInIntent()
-    expect(linked).toBe(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(SHARE_URL)}`)
+    const linked = linkedInComposer()
+    expect(linked).toBe(LINKEDIN_COMPOSER)
+    expect(linked).toBe('https://www.linkedin.com/feed/?shareActive=true')
     expect(linked).not.toContain('Fish')
     expect(linked).not.toContain(OCR)
   })
@@ -114,23 +123,193 @@ describe('copy', () => {
     expect(saved).toBe('lore-square.png')
   })
 
-  it('shares the image file and does not attach screenshot text', async () => {
+  it('shares the image file with the text and Lore link when the device can share files', async () => {
     const blob = new Blob([Uint8Array.from([9])], { type: 'image/png' })
-    const box: { current: { files: File[]; text?: string } | null } = { current: null }
-    const outcome = await shareImageFile(blob, 'lore-story.png', buildPostText(['Recipes', 'Travel']), {
-      canShare: (data) => data.files.length === 1 && !('url' in data),
+    const text = buildPostText(['Dinner recipes', 'Lisbon trips'])
+    const box: { current: { files: File[]; text: string; url: string } | null } = { current: null }
+    let opened = false
+    const outcome = await shareWithFile(blob, 'lore-story.png', text, {
+      canShare: (data) => data.files.length === 1,
       share: async (data) => {
         box.current = data
       },
-      download: () => {
-        throw new Error('should not download')
+      open: () => {
+        opened = true
+      },
+    })
+    expect(outcome).toBe('shared')
+    expect(opened).toBe(false)
+    expect(box.current?.files).toHaveLength(1)
+    expect(box.current?.files[0]?.name).toBe('lore-story.png')
+    expect(box.current?.files[0]?.type).toBe('image/png')
+    expect(box.current?.text).toBe(text)
+    expect(box.current?.url).toBe(SHARE_URL)
+    expect(JSON.stringify({ text: box.current?.text, url: box.current?.url })).not.toContain(OCR)
+  })
+
+  it('saves the picture when the share sheet cannot take a file', async () => {
+    const blob = new Blob([Uint8Array.from([7])], { type: 'image/png' })
+    let saved = ''
+    const outcome = await presentLore(blob, 'lore-square.png', buildPostText(['Dinner recipes']), {
+      canShare: () => false,
+      download: (_blob, filename) => {
+        saved = filename
+      },
+    })
+    expect(outcome).toBe('saved')
+    expect(saved).toBe('lore-square.png')
+    expect(pictureNotice(outcome)).toBe(PICTURE_SAVED)
+  })
+})
+
+describe('platform fallback', () => {
+  const blob = new Blob([Uint8Array.from([4, 5])], { type: 'image/png' })
+  const text = buildPostText(['Dinner recipes'])
+
+  class FakeItem {
+    data: Record<string, Blob>
+    constructor(data: Record<string, Blob>) {
+      this.data = data
+    }
+  }
+
+  it('uses the share sheet for a platform when files are supported', async () => {
+    const box: { current: { files: File[]; text: string; url: string } | null } = { current: null }
+    const outcome = await sharePlatform('linkedin', blob, 'lore-square.png', text, {
+      canShare: (data) => data.files.length === 1,
+      share: async (data) => {
+        box.current = data
+      },
+      open: () => {
+        throw new Error('composer should stay closed')
       },
     })
     expect(outcome).toBe('shared')
     expect(box.current?.files).toHaveLength(1)
-    expect(box.current?.files[0]?.name).toBe('lore-story.png')
-    expect(box.current?.text).toBe('I found my lore: Recipes and Travel. Find yours: https://mlescaille.com/lore')
-    expect(JSON.stringify(box.current)).not.toContain(OCR)
+    expect(box.current?.url).toBe('https://mlescaille.com/lore')
+  })
+
+  it('copies the picture before opening X, and downloads before opening when copy fails', async () => {
+    const order: string[] = []
+    const copied = await sharePlatform('x', blob, 'lore-square.png', text, {
+      canShare: () => false,
+      ClipboardItem: FakeItem as unknown as typeof ClipboardItem,
+      write: async () => {
+        order.push('copy')
+      },
+      download: () => {
+        order.push('download')
+      },
+      open: (url) => {
+        order.push(url)
+      },
+    })
+    expect(copied).toBe('copied')
+    expect(order).toEqual(['copy', xIntent(text)])
+    expect(pictureNotice('copied')).toBe(PICTURE_COPIED)
+
+    const savedOrder: string[] = []
+    const saved = await sharePlatform('threads', blob, 'lore-square.png', text, {
+      canShare: () => false,
+      ClipboardItem: FakeItem as unknown as typeof ClipboardItem,
+      write: async () => {
+        savedOrder.push('copy')
+        throw new Error('no image clipboard')
+      },
+      download: () => {
+        savedOrder.push('download')
+      },
+      open: (url) => {
+        savedOrder.push(url)
+      },
+    })
+    expect(saved).toBe('saved')
+    expect(savedOrder[0]).toBe('copy')
+    expect(savedOrder[1]).toBe('download')
+    expect(savedOrder[2]).toBe(threadsIntent(text))
+    expect(pictureNotice('saved')).toBe(PICTURE_SAVED)
+  })
+
+  it('opens the LinkedIn composer only after the picture is ready, with no empty share-offsite link', async () => {
+    const order: string[] = []
+    await sharePlatform('linkedin', blob, 'lore-square.png', text, {
+      canShare: () => false,
+      ClipboardItem: FakeItem as unknown as typeof ClipboardItem,
+      write: async () => {
+        order.push('copy')
+      },
+      open: (url) => {
+        order.push(url)
+      },
+    })
+    expect(order).toEqual(['copy', 'https://www.linkedin.com/feed/?shareActive=true'])
+    expect(order[1]).not.toContain('share-offsite')
+    expect(order[1]).not.toContain(text)
+  })
+
+  it('saves the Instagram picture and does not open a composer', async () => {
+    let saved = ''
+    let opened = false
+    const outcome = await sharePlatform('instagram', blob, 'lore-story.png', text, {
+      canShare: () => false,
+      download: (_blob, filename) => {
+        saved = filename
+      },
+      open: () => {
+        opened = true
+      },
+    })
+    expect(outcome).toBe('saved')
+    expect(saved).toBe('lore-story.png')
+    expect(opened).toBe(false)
+  })
+
+  it('does not open a composer when the person dismisses the share sheet', async () => {
+    let opened = false
+    let saved = false
+    const outcome = await sharePlatform('x', blob, 'lore-square.png', text, {
+      canShare: () => true,
+      share: async () => {
+        throw new DOMException('The operation was aborted.', 'AbortError')
+      },
+      download: () => {
+        saved = true
+      },
+      open: () => {
+        opened = true
+      },
+    })
+    expect(outcome).toBe('aborted')
+    expect(opened).toBe(false)
+    expect(saved).toBe(false)
+  })
+})
+
+function cardText(svg: string): string {
+  const spans = [...svg.matchAll(/<tspan[^>]*>([^<]*)<\/tspan>/g)].map((match) => match[1] ?? '')
+  return ['Lore', ...spans].join('\n')
+}
+
+describe('friendly names', () => {
+  it('turns keyword mashups into a phrase and keeps story as the phone default', () => {
+    expect(friendlyThemeName('Dinner & Recipe')).toBe('Dinner recipes')
+    expect(friendlyThemeName('Lisbon & Trip')).toBe('Lisbon trips')
+    expect(friendlyThemeName('Miles & Run')).toBe('Miles and runs')
+    expect(friendlyThemeName('Friends and family')).toBe('Friends and family')
+    expect(defaultShareSize(true)).toBe('story')
+    expect(defaultShareSize(false)).toBe('square')
+    const model = shareCardFromResult(
+      {
+        biography: { epithet: 'The Recipe Hoarder' },
+        themes: [{ id: 'recipes', label: 'Dinner & Recipe', count: 4 }],
+      },
+      null,
+      false,
+      'square',
+    )
+    expect(model.themes).toEqual(['Dinner recipes'])
+    expect(shareSurfaceText(model)).not.toContain(OCR)
+    expect(shareSurfaceText(model)).not.toContain('&')
   })
 })
 
@@ -153,12 +332,15 @@ describe('share card', () => {
       const svg = shareCardSvg(model)
       for (const secret of secrets) {
         expect(surface).not.toContain(secret)
-        expect(svg).not.toContain(secret)
+        expect(cardText(svg)).not.toContain(secret)
       }
       expect(surface).toContain('The Recipe Hoarder Who Plans Trips at Midnight')
-      expect(svg).toContain('Recipes')
-      expect(svg).toContain('You got 2 of 3 right.')
-      expect(svg).toContain('Discover your lore at')
+      expect(cardText(svg)).toContain('Recipes')
+      expect(cardText(svg)).toContain('Lore')
+      expect(cardText(svg)).toContain('You got 2 of 3 right.')
+      expect(cardText(svg)).toContain('Discover your lore at')
+      expect(svg).toContain("font-family:'Silkscreen'")
+      expect(svg).toContain("font-family:'Atkinson Hyperlegible'")
       const png = new Resvg(svg, { font: fonts }).render()
       const { width, height } = cardPixels(size)
       expect(png.width).toBe(width)
@@ -172,7 +354,7 @@ describe('share card', () => {
   it('omits the guess line when nobody guessed', () => {
     const model = shareCardFromResult(reading(), null, false, 'square')
     expect(model.guessLine).toBeNull()
-    expect(shareCardSvg(model)).not.toContain('You got')
+    expect(cardText(shareCardSvg(model))).not.toContain('You got')
     expect(shareSurfaceText(model)).not.toContain(OCR)
   })
 })

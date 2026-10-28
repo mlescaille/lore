@@ -1,6 +1,9 @@
+import silkscreen from '@fontsource/silkscreen/files/silkscreen-latin-700-normal.woff?inline'
+import atkinson from '@fontsource/atkinson-hyperlegible/files/atkinson-hyperlegible-latin-700-normal.woff?inline'
 import { SHARE_URL } from '../config.ts'
 import { scoreSentence, topThemes } from '../pipeline/scoring.ts'
 import type { ScoreResult } from '../pipeline/scoring.ts'
+
 export type CardSize = 'square' | 'story'
 
 /** Public share card. Themes, the portrait, and an optional guess line. Never screenshot text. */
@@ -26,6 +29,17 @@ const SHADOW = '#07161b'
 const SANS = 'Atkinson Hyperlegible, DejaVu Sans, sans-serif'
 const PIXEL = 'Silkscreen, Atkinson Hyperlegible, DejaVu Sans, sans-serif'
 
+const BANDS = [
+  { bg: TEAL, fg: PAPER, mark: MARIGOLD, markFg: INK },
+  { bg: TOMATO, fg: PAPER, mark: MARIGOLD, markFg: INK },
+  { bg: MARIGOLD, fg: INK, mark: TEAL, markFg: PAPER },
+]
+
+/** Story is the phone default. The share button uses whichever shape is selected. */
+export function defaultShareSize(phone: boolean): CardSize {
+  return phone ? 'story' : 'square'
+}
+
 export function cardPixels(size: CardSize): { width: number; height: number } {
   return size === 'story' ? { width: 1080, height: 1920 } : { width: 1080, height: 1080 }
 }
@@ -34,15 +48,26 @@ export function cardPixels(size: CardSize): { width: number; height: number } {
 export function portraitFontSize(portrait: string, story: boolean): number {
   const length = portrait.length
   if (story) {
-    if (length > 90) return 64
-    if (length > 64) return 80
-    if (length > 42) return 96
-    return 112
+    if (length > 90) return 72
+    if (length > 64) return 92
+    if (length > 42) return 108
+    return 124
   }
-  if (length > 90) return 48
-  if (length > 64) return 60
-  if (length > 42) return 72
-  return 88
+  if (length > 90) return 56
+  if (length > 64) return 72
+  if (length > 42) return 88
+  return 104
+}
+
+/**
+ * Share cards say "Dinner recipes", not the keyword mash "Dinner & Recipe".
+ * The words still come only from the theme name.
+ */
+export function friendlyThemeName(label: string): string {
+  const cleaned = label.replace(/\s+/g, ' ').trim()
+  const [head, ...rest] = cleaned.split(/\s+·\s+/)
+  const phrase = phraseFromAmpersand(head ?? cleaned)
+  return rest.length ? `${phrase} · ${rest.join(' · ')}` : phrase
 }
 
 export function shareCardFromResult(
@@ -57,7 +82,7 @@ export function shareCardFromResult(
   return {
     size,
     portrait: clean(result.biography.epithet),
-    themes: topThemes(result.themes).map((theme) => clean(theme.label)).filter(Boolean).slice(0, 3),
+    themes: topThemes(result.themes).map((theme) => friendlyThemeName(theme.label)).filter(Boolean).slice(0, 3),
     guessLine: guessed && score && score.guessCount > 0 ? scoreSentence(score.matchedCount, score.guessCount) : null,
     footer: SHARE_FOOTER,
   }
@@ -65,19 +90,18 @@ export function shareCardFromResult(
 
 /** Every string a viewer can read on the card. */
 export function shareSurfaceText(model: ShareCardModel): string {
-  return [model.portrait, ...model.themes, model.guessLine ?? '', model.footer].filter(Boolean).join('\n')
+  return ['Lore', model.portrait, ...model.themes, model.guessLine ?? '', model.footer].filter(Boolean).join('\n')
 }
 
 export function shareCardSvg(model: ShareCardModel): string {
   const { width, height } = cardPixels(model.size)
   const story = model.size === 'story'
-  const marginX = story ? 64 : 48
-  const marginTop = story ? 150 : 48
-  const marginBottom = story ? 210 : 48
-  const bevel = story ? 16 : 14
-  const titleH = story ? 108 : 88
-  const footerH = story ? 118 : 96
-  const pad = story ? 44 : 36
+  const marginX = story ? 56 : 40
+  const marginTop = story ? 128 : 40
+  const marginBottom = story ? 168 : 40
+  const bevel = story ? 18 : 14
+  const titleH = story ? 118 : 96
+  const footerH = story ? 132 : 112
   const windowW = width - marginX * 2
   const windowH = height - marginTop - marginBottom
   const x = marginX
@@ -86,19 +110,17 @@ export function shareCardSvg(model: ShareCardModel): string {
   const faceY = y + bevel
   const faceW = windowW - bevel * 2
   const faceH = windowH - bevel * 2
-  const contentX = faceX + pad
-  const contentW = faceW - pad * 2
-  const contentTop = faceY + titleH + (story ? 36 : 28)
+  const pad = story ? 48 : 40
+  const textW = faceW - pad * 2
+  const contentTop = faceY + titleH
   const footerTop = faceY + faceH - footerH
-  const contentBottom = footerTop - (story ? 72 : 36)
+  const contentBottom = footerTop - (story ? 28 : 20)
 
   let portraitSize = portraitFontSize(model.portrait, story)
-  let themeSize = story ? 84 : 64
-  const minPortrait = story ? 52 : 44
-  const minTheme = story ? 48 : 40
-  const textW = contentW - 36
+  let themeSize = story ? 64 : 52
+  const portraitFloor = story ? 68 : 52
+  const themeFloor = story ? 44 : 40
   const portraitMaxLines = story ? 4 : 3
-  const portraitFloor = story ? 72 : 60
   while (
     model.portrait &&
     portraitSize > portraitFloor &&
@@ -106,94 +128,152 @@ export function shareCardSvg(model: ShareCardModel): string {
   ) {
     portraitSize -= 2
   }
+
   let portraitLines: string[] = []
   let themeLines: string[][] = []
-  let blockH = 0
-  const guessSize = story ? 42 : 34
-  let badge = story ? 72 : 60
-  const rowGap = story ? 28 : 20
+  const guessSize = story ? 40 : 32
+  const badge = story ? 72 : 60
   const available = contentBottom - contentTop
 
   for (let attempt = 0; attempt < 8; attempt++) {
-    badge = Math.max(story ? 64 : 52, Math.min(themeSize, story ? 88 : 68))
     portraitLines = model.portrait ? wrapLines(model.portrait, portraitSize, textW) : []
-    themeLines = model.themes.map((theme) => wrapLines(theme, themeSize, textW - badge - 24))
-    const portraitH = portraitLines.length * lineHeight(portraitSize)
-    const themesH = themeLines.reduce((sum, lines) => sum + Math.max(badge, lines.length * lineHeight(themeSize)) + rowGap, 0)
-    const guessH = model.guessLine ? lineHeight(guessSize) + 12 : 0
-    blockH = portraitH + (portraitLines.length ? 28 : 0) + themesH + guessH
-    if (blockH <= available) break
-    if (portraitSize > minPortrait) portraitSize -= 4
-    if (themeSize > minTheme) themeSize -= 4
+    themeLines = model.themes.map((theme) => wrapLines(theme, themeSize, textW - badge - 28))
+    if (measure(portraitLines, portraitSize, themeLines, themeSize, badge, model.guessLine, guessSize, story) <= available) break
+    if (portraitSize > portraitFloor) portraitSize -= 4
+    if (themeSize > themeFloor) themeSize -= 2
   }
 
+  const blockH = measure(portraitLines, portraitSize, themeLines, themeSize, badge, model.guessLine, guessSize, story)
   const extra = Math.max(0, available - blockH)
-  let cursor = contentTop + Math.min(story ? extra * 0.42 : extra * 0.18, story ? 220 : 36)
+  const heroExtra = Math.min(story ? 240 : 140, Math.round(extra * (story ? 0.42 : 0.55)))
+  const bandExtra = themeLines.length ? Math.min(story ? 56 : 36, Math.round((extra - heroExtra) / themeLines.length)) : 0
   const parts: string[] = []
-
+  parts.push(embeddedFonts())
   parts.push(`<rect width="${width}" height="${height}" fill="${TEAL}"/>`)
-  parts.push(`<rect x="${x + 18}" y="${y + 20}" width="${windowW}" height="${windowH}" fill="${SHADOW}"/>`)
+  parts.push(`<rect x="${x + 18}" y="${y + 22}" width="${windowW}" height="${windowH}" fill="${SHADOW}"/>`)
   parts.push(`<rect x="${x}" y="${y}" width="${windowW}" height="${windowH}" fill="${DARK}"/>`)
   parts.push(`<rect x="${x}" y="${y}" width="${windowW - bevel}" height="${windowH - bevel}" fill="${LIGHT}"/>`)
   parts.push(`<rect x="${faceX}" y="${faceY}" width="${faceW}" height="${faceH}" fill="${PAPER}"/>`)
   parts.push(`<rect x="${faceX}" y="${faceY}" width="${faceW}" height="${titleH}" fill="${TOMATO}"/>`)
 
-  const titleSize = story ? 42 : 34
-  const titleBaseline = faceY + Math.round(titleH * 0.64)
+  const titleSize = story ? 46 : 36
   parts.push(
-    `<text x="${faceX + 28}" y="${titleBaseline}" fill="${PAPER}" font-family="${PIXEL}" font-size="${titleSize}" font-weight="700">Lore</text>`,
+    `<text x="${faceX + 32}" y="${faceY + Math.round(titleH * 0.66)}" fill="${PAPER}" font-family="${PIXEL}" font-size="${titleSize}" font-weight="700">Lore</text>`,
   )
+  drawControls(parts, faceX, faceY, faceW, titleH, story)
 
-  const buttonW = story ? 48 : 40
-  const buttonH = story ? 40 : 34
-  const buttonY = faceY + Math.round((titleH - buttonH) / 2)
-  const glyphs = ['_', '□', '×']
-  glyphs.forEach((glyph, index) => {
-    const buttonX = faceX + faceW - 20 - (glyphs.length - index) * (buttonW + 8)
-    parts.push(`<rect x="${buttonX}" y="${buttonY}" width="${buttonW}" height="${buttonH}" fill="${DARK}"/>`)
-    parts.push(`<rect x="${buttonX}" y="${buttonY}" width="${buttonW - 4}" height="${buttonH - 4}" fill="${LIGHT}"/>`)
-    parts.push(`<rect x="${buttonX + 4}" y="${buttonY + 4}" width="${buttonW - 8}" height="${buttonH - 8}" fill="${PAPER}"/>`)
-    parts.push(
-      `<text x="${buttonX + buttonW / 2}" y="${buttonY + buttonH * 0.7}" fill="${INK}" font-family="${SANS}" font-size="${story ? 22 : 18}" font-weight="700" text-anchor="middle">${xml(glyph)}</text>`,
-    )
-  })
-
+  let cursor = contentTop
   if (portraitLines.length) {
-    parts.push(textRun(portraitLines, contentX, cursor, portraitSize, INK, 700, 'start'))
-    cursor += portraitLines.length * lineHeight(portraitSize) + (story ? 36 : 26)
-    parts.push(`<rect x="${contentX}" y="${cursor}" width="${story ? 168 : 128}" height="${story ? 12 : 10}" fill="${MARIGOLD}"/>`)
-    cursor += story ? 40 : 28
+    const inner = portraitLines.length * lineHeight(portraitSize)
+    const bandH = inner + (story ? 64 : 48) + heroExtra
+    parts.push(`<rect x="${faceX}" y="${cursor}" width="${faceW}" height="${bandH}" fill="${MARIGOLD}"/>`)
+    const textY = cursor + Math.round((bandH - inner) / 2)
+    parts.push(textRun(portraitLines, faceX + pad, textY, portraitSize, INK, 700, 'start'))
+    cursor += bandH
   }
 
   model.themes.forEach((theme, index) => {
     const lines = themeLines[index] ?? [theme]
     const textH = lines.length * lineHeight(themeSize)
-    const rowH = Math.max(badge, textH)
-    const badgeY = cursor + Math.max(0, (lineHeight(themeSize) - badge) / 2)
-    parts.push(`<rect x="${contentX}" y="${badgeY}" width="${badge}" height="${badge}" fill="${INK}"/>`)
-    parts.push(`<rect x="${contentX + 4}" y="${badgeY + 4}" width="${badge - 8}" height="${badge - 8}" fill="${MARIGOLD}"/>`)
+    const bandH = Math.max(badge + 28, textH + (story ? 36 : 28)) + bandExtra
+    const band = BANDS[index % BANDS.length]
+    parts.push(`<rect x="${faceX}" y="${cursor}" width="${faceW}" height="${bandH}" fill="${band.bg}"/>`)
+    const markY = cursor + Math.round((bandH - badge) / 2)
+    const markX = faceX + (story ? 36 : 28)
+    parts.push(`<rect x="${markX}" y="${markY}" width="${badge}" height="${badge}" fill="${band.mark}"/>`)
     parts.push(
-      `<text x="${contentX + badge / 2}" y="${badgeY + badge * 0.68}" fill="${INK}" font-family="${SANS}" font-size="${Math.round(badge * 0.46)}" font-weight="700" text-anchor="middle">${index + 1}</text>`,
+      `<text x="${markX + badge / 2}" y="${markY + badge * 0.68}" fill="${band.markFg}" font-family="${SANS}" font-size="${Math.round(badge * 0.46)}" font-weight="700" text-anchor="middle">${index + 1}</text>`,
     )
-    const labelY = cursor + Math.max(0, (rowH - lines.length * lineHeight(themeSize)) / 2)
-    parts.push(textRun(lines, contentX + badge + 24, labelY, themeSize, INK, 700, 'start'))
-    cursor += rowH + rowGap
+    const labelY = cursor + Math.round((bandH - textH) / 2)
+    parts.push(textRun(lines, markX + badge + 24, labelY, themeSize, band.fg, 700, 'start'))
+    cursor += bandH
   })
 
   if (model.guessLine) {
-    cursor += story ? 8 : 4
     const lines = wrapLines(model.guessLine, guessSize, textW)
-    parts.push(textRun(lines, contentX, cursor, guessSize, TOMATO, 700, 'start'))
+    const guessH = lines.length * lineHeight(guessSize)
+    cursor += story ? 28 : 20
+    parts.push(textRun(lines, faceX + pad, cursor, guessSize, TOMATO, 700, 'start'))
+    cursor += guessH
   }
 
-  parts.push(`<rect x="${faceX + pad}" y="${footerTop}" width="${contentW}" height="8" fill="${MARIGOLD}"/>`)
+  parts.push(`<rect x="${faceX}" y="${footerTop}" width="${faceW}" height="${footerH}" fill="${TEAL}"/>`)
+  parts.push(`<rect x="${faceX}" y="${footerTop}" width="${faceW}" height="10" fill="${MARIGOLD}"/>`)
   const footerSize = story ? 36 : 30
   const footerLines = wrapLines(model.footer, footerSize, textW)
-  const footerBlockH = footerLines.length * lineHeight(footerSize)
-  const footerY = footerTop + 8 + Math.max(0, (footerH - 8 - footerBlockH) / 2)
-  parts.push(textRun(footerLines, faceX + faceW / 2, footerY, footerSize, TEAL, 700, 'middle'))
+  const footerBlock = footerLines.length * lineHeight(footerSize)
+  const footerY = footerTop + 10 + Math.max(0, (footerH - 10 - footerBlock) / 2)
+  parts.push(textRun(footerLines, faceX + faceW / 2, footerY, footerSize, PAPER, 700, 'middle'))
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img">${parts.join('')}</svg>`
+}
+
+function measure(
+  portraitLines: string[],
+  portraitSize: number,
+  themeLines: string[][],
+  themeSize: number,
+  badge: number,
+  guess: string | null,
+  guessSize: number,
+  story: boolean,
+): number {
+  const portraitH = portraitLines.length ? portraitLines.length * lineHeight(portraitSize) + (story ? 64 : 48) : 0
+  const themesH = themeLines.reduce((sum, lines) => {
+    const textH = lines.length * lineHeight(themeSize)
+    return sum + Math.max(badge + 28, textH + (story ? 36 : 28))
+  }, 0)
+  const guessH = guess ? lineHeight(guessSize) + (story ? 28 : 20) : 0
+  return portraitH + themesH + guessH
+}
+
+function drawControls(parts: string[], faceX: number, faceY: number, faceW: number, titleH: number, story: boolean) {
+  const buttonW = story ? 52 : 42
+  const buttonH = story ? 42 : 34
+  const buttonY = faceY + Math.round((titleH - buttonH) / 2)
+  const glyphs = ['_', '□', '×']
+  glyphs.forEach((glyph, index) => {
+    const buttonX = faceX + faceW - 22 - (glyphs.length - index) * (buttonW + 8)
+    parts.push(`<rect x="${buttonX}" y="${buttonY}" width="${buttonW}" height="${buttonH}" fill="${DARK}"/>`)
+    parts.push(`<rect x="${buttonX}" y="${buttonY}" width="${buttonW - 4}" height="${buttonH - 4}" fill="${LIGHT}"/>`)
+    parts.push(`<rect x="${buttonX + 4}" y="${buttonY + 4}" width="${buttonW - 8}" height="${buttonH - 8}" fill="${PAPER}"/>`)
+    parts.push(
+      `<text x="${buttonX + buttonW / 2}" y="${buttonY + Math.round(buttonH * 0.72)}" fill="${INK}" font-family="${SANS}" font-size="${story ? 22 : 18}" font-weight="700" text-anchor="middle">${xml(glyph)}</text>`,
+    )
+  })
+}
+
+function embeddedFonts(): string {
+  return `<defs><style><![CDATA[@font-face{font-family:'Silkscreen';font-weight:700;font-style:normal;src:url('${silkscreen}') format('woff');}@font-face{font-family:'Atkinson Hyperlegible';font-weight:700;font-style:normal;src:url('${atkinson}') format('woff');}]]></style></defs>`
+}
+
+const AND_WHEN_PLURAL = new Set(['miles', 'friends', 'notes', 'people'])
+
+function phraseFromAmpersand(label: string): string {
+  const parts = label.split(/\s+&\s+/)
+  if (parts.length < 2) return label
+  const left = parts[0] ?? ''
+  const right = pluralWord(parts.slice(1).join(' '))
+  if (AND_WHEN_PLURAL.has(left.toLowerCase()) || /s$/i.test(left)) return `${left} and ${right}`
+  return `${left} ${right}`
+}
+
+function pluralWord(word: string): string {
+  const lower = word.trim().toLowerCase()
+  const irregular: Record<string, string> = {
+    recipe: 'recipes',
+    trip: 'trips',
+    run: 'runs',
+    chat: 'chats',
+    person: 'people',
+    family: 'family',
+    story: 'stories',
+    party: 'parties',
+  }
+  if (irregular[lower]) return irregular[lower]
+  if (/(s|x|z|ch|sh)$/i.test(lower)) return lower.endsWith('s') ? lower : `${lower}es`
+  if (/[^aeiou]y$/i.test(lower)) return `${lower.slice(0, -1)}ies`
+  return `${lower}s`
 }
 
 function clean(text: string): string {

@@ -1,20 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import { cardPixels, shareCardFromResult, type CardSize } from '../share/card.ts'
+import { cardPixels, defaultShareSize, shareCardFromResult, type CardSize } from '../share/card.ts'
 import { cardToBlob } from '../share/export.ts'
 import {
-  INSTAGRAM_SAVED,
   buildPostText,
   copyImage,
   copyLink,
-  linkedInIntent,
-  shareImageFile,
-  threadsIntent,
-  xIntent,
+  pictureNotice,
+  presentLore,
+  sharePlatform,
+  type SharePlatform,
 } from '../share/post.ts'
 import type { ScoreResult } from '../pipeline/scoring.ts'
 import type { LoreResult } from '../types.ts'
 import { CardFace } from './CardFace.tsx'
 import { Button } from './ui/button.tsx'
+
+function filenameFor(size: CardSize): string {
+  return size === 'story' ? 'lore-story.png' : 'lore-square.png'
+}
 
 export function BiographyStage({
   result,
@@ -25,7 +28,9 @@ export function BiographyStage({
   score: ScoreResult | null
   guessed: boolean
 }) {
-  const [size, setSize] = useState<CardSize>('square')
+  const [size, setSize] = useState<CardSize>(() =>
+    defaultShareSize(typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches),
+  )
   const [width, setWidth] = useState(640)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
@@ -39,9 +44,6 @@ export function BiographyStage({
   const scale = Math.min(1, width / pixels.width)
   const frameHeight = pixels.height * scale
   const postText = buildPostText(preview.themes)
-  const xHref = xIntent(postText)
-  const threadsHref = threadsIntent(postText)
-  const linkedHref = linkedInIntent()
 
   useEffect(() => {
     const node = frameRef.current
@@ -71,11 +73,26 @@ export function BiographyStage({
     }
   }
 
+  function show(outcome: 'shared' | 'copied' | 'saved' | 'aborted') {
+    const message = pictureNotice(outcome)
+    if (message) setNotice(message)
+  }
+
+  async function shareSelected() {
+    const blob = await png(size)
+    show(await presentLore(blob, filenameFor(size), postText))
+  }
+
+  async function shareOn(platform: SharePlatform) {
+    const blob = await png(size)
+    show(await sharePlatform(platform, blob, filenameFor(size), postText))
+  }
+
   return (
     <section className="share-panel card-stage" aria-label="Share">
       <h2 className="share-title">Share</h2>
       <div className="share-body">
-        <p className="body">Post a picture of your lore, or copy it. The picture uses your themes only. Nothing is uploaded.</p>
+        <p className="body">Share the picture of your lore. It uses your themes only. Nothing is uploaded.</p>
         <div className="segmented" role="group" aria-label="Picture shape">
           <button type="button" className={size === 'square' ? 'btn is-on' : 'btn'} onClick={() => setSize('square')}>
             Square
@@ -95,33 +112,22 @@ export function BiographyStage({
           <CardFace model={squareModel} nodeRef={squareRef} exported />
           <CardFace model={storyModel} nodeRef={storyRef} exported />
         </div>
-        <h3 className="share-group">Post</h3>
+        <Button className="share-main" disabled={busy} onClick={() => run(shareSelected)}>
+          Share my lore
+        </Button>
+        <h3 className="share-group">Or post it on</h3>
         <div className="share-actions">
-          <Button asChild>
-            <a href={xHref} target="_blank" rel="noreferrer">
-              Post to X
-            </a>
+          <Button disabled={busy} onClick={() => run(() => shareOn('x'))}>
+            Post to X
           </Button>
-          <Button
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                const outcome = await shareImageFile(await png('story'), 'lore-story.png', postText)
-                if (outcome === 'saved') setNotice(INSTAGRAM_SAVED)
-              })
-            }
-          >
+          <Button disabled={busy} onClick={() => run(() => shareOn('instagram'))}>
             Post to Instagram
           </Button>
-          <Button asChild>
-            <a href={threadsHref} target="_blank" rel="noreferrer">
-              Post to Threads
-            </a>
+          <Button disabled={busy} onClick={() => run(() => shareOn('threads'))}>
+            Post to Threads
           </Button>
-          <Button asChild>
-            <a href={linkedHref} target="_blank" rel="noreferrer">
-              Post to LinkedIn
-            </a>
+          <Button disabled={busy} onClick={() => run(() => shareOn('linkedin'))}>
+            Post to LinkedIn
           </Button>
         </div>
         <h3 className="share-group">Copy</h3>
@@ -130,9 +136,8 @@ export function BiographyStage({
             disabled={busy}
             onClick={() =>
               run(async () => {
-                const filename = size === 'story' ? 'lore-story.png' : 'lore-square.png'
-                const outcome = await copyImage(await png(size), filename)
-                setNotice(outcome === 'copied' ? 'Copied!' : 'Image saved.')
+                const outcome = await copyImage(await png(size), filenameFor(size))
+                show(outcome)
               })
             }
           >
@@ -150,7 +155,7 @@ export function BiographyStage({
           </Button>
         </div>
         {notice && (
-          <p className="note" role="status">
+          <p className="banner" role="status">
             {notice}
           </p>
         )}
