@@ -5,11 +5,7 @@ type Extractor = (
 
 let extractorPromise: Promise<Extractor> | null = null
 
-/** Small sentence model. Downloaded once to the device. Never receives excluded text. */
-export async function embedTexts(
-  texts: string[],
-  onProgress?: (done: number, total: number) => void,
-): Promise<number[][]> {
+function loadExtractor(): Promise<Extractor> {
   if (!extractorPromise) {
     extractorPromise = (async () => {
       const { pipeline, env } = await import('@huggingface/transformers')
@@ -20,10 +16,28 @@ export async function embedTexts(
       return extractor as unknown as Extractor
     })()
   }
+  return extractorPromise
+}
 
+/** Start the guess-scoring model download without waiting for a guess. */
+export function preloadEmbed(): Promise<void> {
+  return loadExtractor().then(
+    () => undefined,
+    (error) => {
+      extractorPromise = null
+      throw error
+    },
+  )
+}
+
+/** Small sentence model. Downloaded once to the device. Never receives excluded text. */
+export async function embedTexts(
+  texts: string[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<number[][]> {
   let extractor: Extractor
   try {
-    extractor = await extractorPromise
+    extractor = await loadExtractor()
   } catch (error) {
     extractorPromise = null
     throw error

@@ -9,6 +9,7 @@ const sharp = require('sharp') as typeof import('sharp')
 const root = path.resolve(import.meta.dirname, '..')
 const out = '/opt/cursor/artifacts/upload'
 const skipOut = '/opt/cursor/artifacts/skip'
+const backgroundOut = '/opt/cursor/artifacts/background'
 const work = path.join(root, 'e2e/.fixtures')
 
 const people = [
@@ -33,6 +34,7 @@ test.beforeAll(async () => {
   await mkdir(path.join(work, 'folder'), { recursive: true })
   await mkdir(out, { recursive: true })
   await mkdir(skipOut, { recursive: true })
+  await mkdir(backgroundOut, { recursive: true })
   await writeFile(path.join(work, 'notes.txt'), 'not a picture')
   await writeFile(path.join(work, 'folder', 'notes.txt'), 'not a picture')
   const { copyFile } = await import('node:fs/promises')
@@ -137,6 +139,39 @@ test('skipping the guess shows the portrait without a score', async ({ page, bro
     scroller.scrollTop = Math.max(0, top - 120)
   })
   await page.screenshot({ path: path.join(skipOut, 'skipped-result.png') })
+})
+
+test('waiting on step 2 shows the portrait without a processing screen', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'the full on-device model run is checked in chromium')
+  await openHome(page)
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByText('Start with my screenshots').click(),
+  ])
+  await chooser.setFiles([...people, diagram])
+  await expectChoice(page)
+  await page.screenshot({ path: path.join(backgroundOut, 'choice.png') })
+  const choiceAt = Date.now()
+  await expect(page.getByText('Your lore is ready.')).toBeVisible({ timeout: 180_000 })
+  const readyAt = Date.now()
+  await page.screenshot({ path: path.join(backgroundOut, 'ready.png') })
+  const clickAt = Date.now()
+  await page.getByRole('button', { name: 'Just show me my lore' }).click()
+  await expect(page.getByRole('heading', { name: 'Your lore', exact: true })).toBeVisible({ timeout: 5_000 })
+  const resultAt = Date.now()
+  expect(resultAt - clickAt).toBeLessThan(1_500)
+  await expect(page.getByRole('heading', { name: 'Finding your lore' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Your guess' })).toHaveCount(0)
+  await page.screenshot({ path: path.join(backgroundOut, 'instant-result.png') })
+  await writeFile(
+    path.join(backgroundOut, 'timings.txt'),
+    [
+      'Before: the portrait (picture model, themes, and text) started only after Just show me my lore.',
+      'A skip of 4 pictures on a warm model took about 8 seconds from that click to the result.',
+      `After: background reading became ready ${(readyAt - choiceAt) / 1000}s after the choice screen.`,
+      `Clicking Just show me my lore then showed the result in ${resultAt - clickAt}ms, with no processing screen.`,
+    ].join('\n'),
+  )
 })
 
 test('a folder of pictures reaches the guess step', async ({ page }) => {

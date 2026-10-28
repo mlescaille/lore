@@ -108,10 +108,7 @@ export default function App() {
 
   const front = stack[stack.length - 1]
   const step = stepOf(phase)
-  const busy =
-    phase.type === 'preparing' ||
-    phase.type === 'finishing' ||
-    (phase.type === 'guess' && phase.holding)
+  const busy = phase.type === 'preparing' || phase.type === 'finishing'
   const loreTitle = phase.type === 'landing' ? 'Welcome to Lore' : 'Lore.exe'
 
   const icons: { id: WinId; label: string; art: string }[] = [

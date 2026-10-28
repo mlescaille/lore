@@ -27,6 +27,7 @@ interface ProgressEvent {
 export interface ClassifyHooks {
   onDownload?: (loaded: number, total: number) => void
   onImage?: (done: number, total: number) => void
+  shouldContinue?: () => boolean
 }
 
 interface Towers {
@@ -123,6 +124,7 @@ export async function classifyImages(
   const towers = await preloadVision(hooks.onDownload)
   const scores = new Map<string, VisualHit[]>()
   for (let index = 0; index < items.length; index++) {
+    if (hooks.shouldContinue && !hooks.shouldContinue()) break
     const item = items[index]
     if (!item) continue
     try {

@@ -5,6 +5,16 @@ import { Input } from './ui/input.tsx'
 
 const PLACEHOLDERS = ['First guess', 'Second guess', 'Third guess']
 
+function BackgroundLine({ ready, progress }: { ready: boolean; progress: Progress }) {
+  const sentence = ready ? 'Your lore is ready.' : progress.detail || progress.label
+  if (!sentence) return null
+  return (
+    <p className="bg-progress" role="status">
+      {sentence}
+    </p>
+  )
+}
+
 export function GuessStep({
   ready,
   holding,
@@ -38,8 +48,8 @@ export function GuessStep({
   if (holding) {
     return (
       <StatusCard
-        title="Reading your screenshots"
-        detail={progress.detail || 'This stays on your device. Your lore is next.'}
+        title="Still working"
+        detail={progress.detail || progress.label}
         done={progress.done}
         total={progress.total}
       />
@@ -60,7 +70,7 @@ export function GuessStep({
           </button>
         </div>
         {note && <p className="note">{note}</p>}
-        {!ready && <p className="note">Still reading your screenshots. You can go ahead.</p>}
+        <BackgroundLine ready={ready} progress={progress} />
       </div>
     )
   }
@@ -107,7 +117,7 @@ export function GuessStep({
         />
       </label>
       {note && <p className="note">{note}</p>}
-      {!ready && <p className="note">Still reading your screenshots. You can guess now.</p>}
+      <BackgroundLine ready={ready} progress={progress} />
       <button type="button" className="skip-link" onClick={onSkip}>
         Skip guessing
       </button>
