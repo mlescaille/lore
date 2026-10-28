@@ -34,7 +34,7 @@ export type Phase =
   | { type: 'guess'; kind: 'sample' | 'own'; ready: boolean; progress: Progress; note: string; holding: boolean }
   | { type: 'finishing'; label: string; detail?: string; done?: number; total?: number }
   | { type: 'reveal'; model: RevealModel }
-  | { type: 'error'; message: string }
+  | { type: 'error'; message: string; step: 1 | 2 | 3 }
 
 interface Job {
   kind: 'sample' | 'own'
@@ -234,9 +234,18 @@ export function useSession() {
           kept: false,
         },
       })
-    } catch {
+    } catch (error) {
+      console.error('Lore failed during lore', error)
       if (runId.current !== token) return
-      setPhase({ type: 'error', message: 'The reading stopped on this device. Nothing was uploaded. You can try again.' })
+      const detail = error instanceof Error ? error.message : ''
+      const download = /fetch|network|failed to fetch|huggingface|http/i.test(detail)
+      setPhase({
+        type: 'error',
+        step: 3,
+        message: download
+          ? "The picture model didn't download. Check your connection and try again."
+          : 'The reading stopped on this computer. Nothing was uploaded.',
+      })
     } finally {
       finishing.current = false
     }
@@ -296,7 +305,10 @@ export function useSession() {
             paintGuess()
           }),
         )
-        .catch(() => undefined)
+        .catch((error) => {
+          console.error('Lore failed during model', error)
+          return undefined
+        })
       try {
         const { recognizeAll } = await import('./pipeline/ocr.ts')
         const concurrency = navigator.hardwareConcurrency > 4 ? 3 : 2
@@ -355,12 +367,17 @@ export function useSession() {
           note,
         })
         if (pending.current) await finish()
-      } catch {
+      } catch (error) {
+        console.error('Lore failed during words', error)
         if (runId.current !== token) return
+        const detail = error instanceof Error ? error.message : ''
+        const download = /fetch|network|failed to fetch|lang|traineddata/i.test(detail)
         setPhase({
           type: 'error',
-          message:
-            'The text reader could not start. It downloads a language file once, then stays on this device. Nothing was uploaded.',
+          step: 2,
+          message: download
+            ? "The text reader didn't download. Check your connection and try again."
+            : 'The text reader didn’t start. It downloads a language file once, then stays on this computer.',
         })
       }
     },
@@ -417,7 +434,7 @@ export function useSession() {
   }, [finish, revoke])
 
   const startFiles = useCallback(
-    async (files: File[]) => {
+    async (files: File[], alreadyUnreadable = 0) => {
       const token = ++runId.current
       pending.current = null
       finishing.current = false
@@ -425,10 +442,20 @@ export function useSession() {
       revoke()
       blobs.current.clear()
       images.current.clear()
-      setPhase({ type: 'preparing', progress: { label: 'Checking the files', done: 0, total: Math.max(files.length, 1) } })
+      const incoming = Array.from(files ?? [])
+      if (incoming.length === 0) {
+        const count = alreadyUnreadable
+        setPhase({
+          type: 'error',
+          step: 1,
+          message: count > 0 ? `Couldn't read ${count} file${count === 1 ? '' : 's'}.` : 'Choose a PNG, JPG, or HEIC picture.',
+        })
+        return
+      }
+      setPhase({ type: 'preparing', progress: { label: 'Checking the files', done: 0, total: Math.max(incoming.length, 1) } })
       try {
         const prepared = await prepareFiles(
-          files,
+          incoming,
           (done, total, label) => {
             if (runId.current !== token) return
             setPhase({ type: 'preparing', progress: { label, done, total } })
@@ -436,16 +463,21 @@ export function useSession() {
           () => runId.current === token,
         )
         if (runId.current !== token) return
+        const unreadable = prepared.unreadable + alreadyUnreadable
         if (prepared.files.length === 0) {
           setPhase({
             type: 'error',
-            message: 'Those files were not screenshots we can read. Try PNG, JPG, or HEIC.',
+            step: 1,
+            message:
+              unreadable > 0
+                ? `Couldn't read ${unreadable} file${unreadable === 1 ? '' : 's'}.`
+                : 'Choose a PNG, JPG, or HEIC picture.',
           })
           return
         }
         const bits = [
           prepared.duplicates ? `Removed ${prepared.duplicates} duplicate${prepared.duplicates === 1 ? '' : 's'}.` : '',
-          prepared.unreadable ? `Could not open ${prepared.unreadable}.` : '',
+          unreadable ? `Couldn't read ${unreadable} file${unreadable === 1 ? '' : 's'}.` : '',
           prepared.skipped ? `Skipped ${prepared.skipped} that were not images.` : '',
         ].filter(Boolean)
         const note = bits.join(' ')
@@ -454,18 +486,33 @@ export function useSession() {
           return
         }
         await beginOwn(prepared.files, note)
-      } catch {
+      } catch (error) {
+        console.error('Lore failed during open', error)
         if (runId.current !== token) return
-        setPhase({ type: 'error', message: 'Those files could not be opened on this device. Nothing was uploaded.' })
+        setPhase({
+          type: 'error',
+          step: 1,
+          message: "Couldn't open those pictures. Nothing was uploaded.",
+        })
       }
     },
     [beginOwn, revoke],
   )
 
+  const failOpen = useCallback((message: string) => {
+    console.error('Lore failed during open', message)
+    setPhase({ type: 'error', step: 1, message })
+  }, [])
+
   const startDrop = useCallback(
     async (data: DataTransfer) => {
-      const files = await filesFromDataTransfer(data)
-      await startFiles(files)
+      try {
+        const files = await filesFromDataTransfer(data)
+        await startFiles(files)
+      } catch (error) {
+        console.error('Lore failed during open', error)
+        setPhase({ type: 'error', step: 1, message: "Couldn't read that folder." })
+      }
     },
     [startFiles],
   )
@@ -577,6 +624,7 @@ export function useSession() {
     startSample,
     startFiles,
     startDrop,
+    failOpen,
     confirmRange,
     submitGuess,
     setKept,

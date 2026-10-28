@@ -128,7 +128,8 @@ export async function classifyImages(
     try {
       const rows = await towers.scoreImage(item.blob)
       scores.set(item.id, aggregateVision(rows))
-    } catch {
+    } catch (error) {
+      console.error('Lore failed during model', item.id, error)
       scores.set(item.id, [])
     }
     hooks.onImage?.(index + 1, items.length)

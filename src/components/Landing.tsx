@@ -4,18 +4,35 @@ import type { SavedReading } from '../storage/idb.ts'
 
 const ACCEPT = 'image/png,image/jpeg,image/heic,image/heif,.heic,.heif,.jpg,.jpeg,.png'
 
+async function snapshotFiles(list: FileList | File[]): Promise<{ kept: File[]; failed: number }> {
+  const kept: File[] = []
+  let failed = 0
+  for (const file of [...list]) {
+    try {
+      const bytes = await file.arrayBuffer()
+      kept.push(new File([bytes], file.name || 'picture', { type: file.type || '', lastModified: file.lastModified }))
+    } catch (error) {
+      failed += 1
+      console.error('Lore failed during open', file.name, error)
+    }
+  }
+  return { kept, failed }
+}
+
 export function Landing({
   saved,
   onFiles,
   onSample,
   onOpenSaved,
   onForgetSaved,
+  onOpenError,
 }: {
   saved: SavedReading | null
-  onFiles: (files: File[]) => void
+  onFiles: (files: File[], unreadable?: number) => void
   onSample: () => void
   onOpenSaved: () => void
   onForgetSaved: () => void
+  onOpenError: (message: string) => void
 }) {
   const [dragging, setDragging] = useState(false)
 
@@ -38,7 +55,13 @@ export function Landing({
       onDrop={(event) => {
         event.preventDefault()
         setDragging(false)
-        void filesFromDataTransfer(event.dataTransfer).then(onFiles)
+        void filesFromDataTransfer(event.dataTransfer)
+          .then((files) => snapshotFiles(files))
+          .then(({ kept, failed }) => onFiles(kept, failed))
+          .catch((error) => {
+            console.error('Lore failed during open', error)
+            onOpenError("Couldn't read that folder.")
+          })
       }}
     >
       <h1 className="welcome-title">Welcome to Lore</h1>
@@ -65,9 +88,13 @@ export function Landing({
             accept={ACCEPT}
             multiple
             onChange={(event) => {
-              const list = event.target.files
-              if (list && list.length > 0) onFiles([...list])
-              event.target.value = ''
+              const input = event.currentTarget
+              const list = input.files
+              if (!list || list.length === 0) return
+              void snapshotFiles(list).then(({ kept, failed }) => {
+                input.value = ''
+                onFiles(kept, failed)
+              })
             }}
           />
         </label>
@@ -83,9 +110,13 @@ export function Landing({
               if (node) node.setAttribute('webkitdirectory', '')
             }}
             onChange={(event) => {
-              const list = event.target.files
-              if (list && list.length > 0) onFiles([...list])
-              event.target.value = ''
+              const input = event.currentTarget
+              const list = input.files
+              if (!list || list.length === 0) return
+              void snapshotFiles(list).then(({ kept, failed }) => {
+                input.value = ''
+                onFiles(kept, failed)
+              })
             }}
           />
         </label>

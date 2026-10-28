@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview --host 127.0.0.1 --port 4317",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "sample:render": "tsx scripts/render-samples.ts"
   },
   "dependencies": {
@@ -29,6 +30,7 @@
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.19.2",

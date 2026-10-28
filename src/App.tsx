@@ -27,9 +27,10 @@ const START_POS: Record<WinId, { x: number; y: number }> = {
   forget: { x: 420, y: 180 },
 }
 
-function stepOf(type: Phase['type']): 1 | 2 | 3 {
-  if (type === 'guess') return 2
-  if (type === 'finishing' || type === 'reveal' || type === 'error') return 3
+function stepOf(phase: Phase): 1 | 2 | 3 {
+  if (phase.type === 'error') return phase.step
+  if (phase.type === 'guess') return 2
+  if (phase.type === 'finishing' || phase.type === 'reveal') return 3
   return 1
 }
 
@@ -106,7 +107,7 @@ export default function App() {
   }
 
   const front = stack[stack.length - 1]
-  const step = stepOf(phase.type)
+  const step = stepOf(phase)
   const busy =
     phase.type === 'preparing' ||
     phase.type === 'finishing' ||
@@ -171,7 +172,8 @@ export default function App() {
               {phase.type === 'landing' && (
                 <Landing
                   saved={session.saved}
-                  onFiles={(files) => void session.startFiles(files)}
+                  onFiles={(files, unreadable) => void session.startFiles(files, unreadable)}
+                  onOpenError={session.failOpen}
                   onSample={() => void session.startSample()}
                   onOpenSaved={session.openSaved}
                   onForgetSaved={() => session.setConfirming(true)}
@@ -221,7 +223,7 @@ export default function App() {
                   <h1 className="pane-title">That didn’t finish</h1>
                   <p className="body">{phase.message}</p>
                   <button type="button" className="btn btn-primary" onClick={session.readAnother}>
-                    Start over
+                    Try again
                   </button>
                 </section>
               )}
@@ -231,9 +233,9 @@ export default function App() {
                 Back
               </button>
               {phase.type === 'landing' ? (
-                <label className="btn btn-default" htmlFor="shot-files">
+                <button type="button" className="btn btn-default" onClick={() => document.getElementById('shot-files')?.click()}>
                   Next
-                </label>
+                </button>
               ) : phase.type === 'guess' && !phase.holding ? (
                 <button type="submit" form="lore-guess" className="btn btn-default" disabled={!guessOk}>
                   Next

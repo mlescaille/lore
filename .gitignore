@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 eng.traineddata
+e2e/.fixtures
+test-results
+playwright-report
 
 # Editor directories and files
 .vscode/*

@@ -32,12 +32,24 @@ async function walk(entry: FileSystemEntry, files: File[]): Promise<void> {
 }
 
 export async function filesFromDataTransfer(data: DataTransfer): Promise<File[]> {
-  const entries = [...data.items]
-    .filter((item) => item.kind === 'file')
-    .map((item) => item.webkitGetAsEntry?.() ?? null)
-    .filter((entry): entry is FileSystemEntry => Boolean(entry))
-  if (entries.length === 0) return [...data.files]
+  const items = [...data.items].filter((item) => item.kind === 'file')
+  const entries: FileSystemEntry[] = []
+  for (const item of items) {
+    try {
+      const entry = item.webkitGetAsEntry?.() ?? null
+      if (entry) entries.push(entry)
+    } catch (error) {
+      console.error('Lore failed during open', error)
+    }
+  }
   const files: File[] = []
-  for (const entry of entries) await walk(entry, files)
-  return files.length > 0 ? files : [...data.files]
+  for (const entry of entries) {
+    try {
+      await walk(entry, files)
+    } catch (error) {
+      console.error('Lore failed during open', entry.name, error)
+    }
+  }
+  if (files.length > 0) return files
+  return [...data.files]
 }

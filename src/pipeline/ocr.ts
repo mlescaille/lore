@@ -58,7 +58,8 @@ export async function recognizeAll(
           text: raw,
           cleanText: chooseCleanText(tokensFromPage(data), raw, pageConfidence),
         })
-      } catch {
+      } catch (error) {
+        console.error('Lore failed during words', item.id, error)
         results.push({ id: item.id, text: '', cleanText: '' })
       }
       done += 1
