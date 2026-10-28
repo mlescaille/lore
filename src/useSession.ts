@@ -8,7 +8,7 @@ import { parseBlocklist } from './pipeline/exclusion.ts'
 import { assignMatches, hasGuess, scoreGuessesLexically, vectorMatrix, type ScoreResult } from './pipeline/scoring.ts'
 import { SAMPLE_SHOTS, sampleText } from './sample/manifest.ts'
 import { sampleImageUrl } from './sample/images.ts'
-import { backgroundSentence, startBackgroundReading, type BackgroundReading } from './session/background.ts'
+import { backgroundSentence, clampCount, startBackgroundReading, type BackgroundReading } from './session/background.ts'
 import { forgetAll, loadSaved, saveReading, type SavedReading } from './storage/idb.ts'
 import type { VisualHit } from './pipeline/signals.ts'
 import type { InputShot, LoreResult } from './types.ts'
@@ -253,14 +253,16 @@ export function useSession() {
       })
       const paint = (kind: 'words' | 'model' | 'pictures' | 'ready', done: number, total: number) => {
         if (runId.current !== token) return
-        const sentence = backgroundSentence(kind, done, total)
+        const safeTotal = kind === 'model' ? 100 : Math.max(0, total)
+        const safeDone = clampCount(done, safeTotal)
+        const sentence = backgroundSentence(kind, safeDone, safeTotal)
         setPhase({
           type: 'guess',
           kind: 'own',
           ready: kind === 'ready',
           holding: Boolean(pending.current),
           picking: pickingRef.current,
-          progress: { label: sentence, detail: sentence, done, total: kind === 'model' ? 100 : total },
+          progress: { label: sentence, detail: sentence, done: safeDone, total: safeTotal },
           note,
         })
       }

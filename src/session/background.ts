@@ -62,7 +62,7 @@ export function startBackgroundReading<T>(
     start() {
       void work(
         (next) => {
-          progress = next
+          progress = clampProgress(next)
         },
         () => !cancelled,
       ).then(
@@ -84,10 +84,21 @@ export function startBackgroundReading<T>(
   }
 }
 
+/** A count shown to the user. Never larger than the total, and never below zero. */
+export function clampCount(done: number, total: number): number {
+  if (total <= 0) return 0
+  return Math.min(Math.max(done, 0), total)
+}
+
+export function clampProgress(progress: BackgroundProgress): BackgroundProgress {
+  const total = Math.max(0, progress.total)
+  return { ...progress, done: clampCount(progress.done, total), total }
+}
+
 export function backgroundSentence(kind: 'words' | 'model' | 'pictures' | 'ready', done: number, total: number): string {
-  const count = total > 0 ? Math.min(Math.max(done, 0), total) : 0
+  const count = clampCount(done, total)
   if (kind === 'ready') return 'Your lore is ready.'
   if (kind === 'model') return 'Getting the picture reader ready...'
-  if (kind === 'pictures') return `Looking at your screenshots in the background... ${count} of ${total}`
-  return `Reading your screenshots in the background... ${count} of ${total}`
+  if (kind === 'pictures') return `Looking at pictures ${count} of ${total}`
+  return `Reading words ${count} of ${total}`
 }

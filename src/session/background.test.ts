@@ -69,8 +69,20 @@ describe('background reading', () => {
   })
 
   it('describes background progress in plain words', () => {
-    expect(backgroundSentence('words', 12, 30)).toBe('Reading your screenshots in the background... 12 of 30')
-    expect(backgroundSentence('pictures', 2, 6)).toBe('Looking at your screenshots in the background... 2 of 6')
+    expect(backgroundSentence('words', 2, 4)).toBe('Reading words 2 of 4')
+    expect(backgroundSentence('pictures', 3, 4)).toBe('Looking at pictures 3 of 4')
     expect(backgroundSentence('ready', 6, 6)).toBe('Your lore is ready.')
+  })
+
+  it('never lets the finished count pass the total', () => {
+    expect(backgroundSentence('words', 9, 4)).toBe('Reading words 4 of 4')
+    expect(backgroundSentence('pictures', 9, 4)).toBe('Looking at pictures 4 of 4')
+    const run = startBackgroundReading(async (report) => {
+      report({ label: 'too high', done: 9, total: 4 })
+      return 'ok'
+    })
+    run.start()
+    expect(run.progress.done).toBe(4)
+    expect(run.progress.done).toBeLessThanOrEqual(run.progress.total)
   })
 })
