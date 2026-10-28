@@ -1,5 +1,5 @@
 import { suggestionFor } from '../pipeline/biography.ts'
-import { topThemes } from '../pipeline/scoring.ts'
+import { hasGuess, topThemes } from '../pipeline/scoring.ts'
 import { formatRange, plural } from '../lib/format.ts'
 import { downloadJson } from '../share/export.ts'
 import type { RevealModel } from '../useSession.ts'
@@ -70,7 +70,7 @@ export function Reveal({
           )}
       </section>
       {score && model.guesses.length > 0 && <ScorePanel score={score} />}
-      {!empty && <BiographyStage result={result} />}
+      {!empty && <BiographyStage result={result} score={score} guessed={hasGuess(model.guesses)} />}
       <section className="keep-row">
           <h2 className="pane-title">On this device</h2>
           <p className="body">Save the reading here, or start over. Your screenshot files stay where they were.</p>

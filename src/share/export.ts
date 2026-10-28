@@ -1,18 +1,5 @@
 import { toPng } from 'html-to-image'
-import { APP_URL } from '../config.ts'
 import type { LoreResult } from '../types.ts'
-
-export function buildCaption(epithet: string, appUrl = APP_URL): string {
-  return `Apparently I'm ${epithet}. Discover your lore: ${appUrl}`
-}
-
-export function xIntent(caption: string): string {
-  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}`
-}
-
-export function linkedInIntent(url = APP_URL): string {
-  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
-}
 
 export function toContract(result: LoreResult): LoreResult {
   return {
@@ -68,28 +55,15 @@ export function downloadJson(result: LoreResult) {
 }
 
 export async function cardToBlob(node: HTMLElement): Promise<Blob> {
+  const width = node.offsetWidth || Number(node.dataset.shareWidth)
+  const height = node.offsetHeight || Number(node.dataset.shareHeight)
   const dataUrl = await toPng(node, {
     cacheBust: true,
     pixelRatio: 1,
-    backgroundColor: '#008080',
-    width: node.offsetWidth,
-    height: node.offsetHeight,
+    backgroundColor: '#163e48',
+    width,
+    height,
   })
   const response = await fetch(dataUrl)
   return response.blob()
-}
-
-export async function shareCard(blob: Blob, filename: string, caption: string): Promise<'shared' | 'downloaded' | 'aborted'> {
-  const file = new File([blob], filename, { type: 'image/png' })
-  if (navigator.share && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], text: caption, title: 'Lore' })
-      return 'shared'
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return 'aborted'
-      throw error
-    }
-  }
-  downloadBlob(blob, filename)
-  return 'downloaded'
 }

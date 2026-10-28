@@ -320,7 +320,7 @@ export default function App() {
               <ul className="plain-list">
                 <li>Screenshots never leave this computer.</li>
                 <li>Pictures that look private are skipped. Only the count is kept.</li>
-                <li>The picture you share uses theme names, counts, dates, and a title. Not your screenshot words or pictures.</li>
+                <li>The picture you share uses your theme names and a short portrait. Not your screenshot words, file names, or pictures.</li>
               </ul>
             </div>
           </OsWindow>

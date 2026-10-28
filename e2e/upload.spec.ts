@@ -129,7 +129,7 @@ test('skipping the guess shows the portrait without a score', async ({ page, bro
   await page.getByRole('button', { name: 'Just show me my lore' }).click()
   await expect(page.getByRole('heading', { name: 'Your lore', exact: true })).toBeVisible({ timeout: 180_000 })
   await expect(page.getByRole('heading', { name: 'Your guess' })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Share it' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Share' })).toBeVisible()
   await expect(page.locator('.lore-result')).toContainText(/Celebrations|Friends and family|People|Diagrams/)
   await page.evaluate(() => {
     const scroller = document.querySelector('.lore-scroll')
