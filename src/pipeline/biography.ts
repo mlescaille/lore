@@ -46,6 +46,34 @@ const FLAVORS: Flavor[] = [
     habit: 'screenshots comments to win an argument with themselves',
     chapterTitles: ['The redlines you kept', 'Another pass at the layout'],
   },
+  {
+    id: 'celebrations',
+    words: ['celebration', 'celebrations', 'party', 'birthday', 'wedding', 'toast', 'cheers', 'gathering', 'festival', 'balloon', 'cake'],
+    title: 'Party Correspondent',
+    habit: 'saves the party for later',
+    chapterTitles: ['The night you kept', 'Back at the party'],
+  },
+  {
+    id: 'people',
+    words: ['friend', 'friends', 'family', 'people', 'person', 'portrait', 'reunion', 'smile'],
+    title: 'Keeper of the Room',
+    habit: 'keeps the people in the room',
+    chapterTitles: ['The people in the room', 'Back with the people'],
+  },
+  {
+    id: 'systems',
+    words: ['tech', 'technology', 'system', 'systems', 'diagram', 'latency', 'consistency', 'software', 'computer', 'architecture', 'learning', 'algorithm', 'availability', 'partition'],
+    title: 'Systems Scribbler',
+    habit: 'saves diagrams for later',
+    chapterTitles: ['The diagram you kept', 'Back to the figure'],
+  },
+  {
+    id: 'food',
+    words: ['food', 'meal', 'restaurant', 'coffee', 'pizza', 'dessert', 'breakfast', 'lunch'],
+    title: 'Menu Archivist',
+    habit: 'saves meals they meant to have',
+    chapterTitles: ['The meal you meant to have', 'Back to the table'],
+  },
 ]
 
 const SMALL = new Set(['a', 'an', 'the', 'at', 'of', 'in', 'on', 'for', 'to', 'and', 'but', 'with', 'from', 'by', 'before'])
@@ -88,6 +116,27 @@ export function matchFlavor(text: string): Flavor | null {
 function themeText(theme: Theme | undefined): string {
   if (!theme) return ''
   return `${theme.label} ${theme.keywords.join(' ')}`
+}
+
+const SUGGESTIONS: Record<string, string> = {
+  celebrations: 'You keep the party, so you can look at it again.',
+  friends: 'The people close to you keep showing up.',
+  people: 'You save faces, not just places.',
+  recipes: 'You save meals you mean to cook.',
+  food: 'Food is how you remember a day.',
+  travel: 'You save the trip while it is still a plan.',
+  fitness: 'You keep the workout you mean to do.',
+  messages: 'You save the chat before it disappears.',
+  work: 'Work follows you into your screenshots.',
+  tech: 'You keep the technical thing you want to understand.',
+  learning: 'You save what you are trying to learn.',
+  systems: 'You keep the diagram so you can think about it later.',
+  vibes: 'Almost no words here. The mood is the point.',
+}
+
+/** One friendly sentence about what a theme suggests. Never a stat or a raw token. */
+export function suggestionFor(id: string, label: string): string {
+  return SUGGESTIONS[id] ?? `You keep coming back to ${label.toLowerCase()}.`
 }
 
 export function epithetFor(themes: Theme[]): string {
@@ -142,6 +191,18 @@ function narrativeFor(flavor: Flavor | null, label: string, count: number, start
   }
   if (flavor?.id === 'studio') {
     return `${range}. Work got the red pen. ${count} screenshots of layouts, critiques, and the version you wanted to defend.`
+  }
+  if (flavor?.id === 'celebrations') {
+    return `${range}. A celebration got filed. ${count} pictures of people who showed up, kept like the night was worth proving.`
+  }
+  if (flavor?.id === 'people') {
+    return `${range}. The room made the cut. ${count} pictures of friends and family, saved before the moment moved on.`
+  }
+  if (flavor?.id === 'systems') {
+    return `${range}. A diagram got the last word. ${count} shots of systems, notes, and the tradeoff you wanted to remember.`
+  }
+  if (flavor?.id === 'food') {
+    return `${range}. Meals were the plot. ${count} shots of food you meant to cook, order, or just remember.`
   }
   if (returned) return `${range}. ${label} came back for ${count} more screenshots, which is a habit with a calendar.`
   return `${range} leaned toward ${label}. ${count} screenshots in this stretch, kept like evidence.`

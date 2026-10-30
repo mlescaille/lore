@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { MAX_SHOTS } from '../config.ts'
 import { utcDay } from '../lib/format.ts'
 import type { PreparedFile } from '../pipeline/ingest.ts'
-import { TitleBar } from './Window.tsx'
 import { Button } from './ui/button.tsx'
 import { Input } from './ui/input.tsx'
 
@@ -34,14 +33,10 @@ export function RangeStep({
   const lowConfidence = files.filter((file) => file.timestampSource === 'lastModified').length
 
   return (
-    <section className="win range-step">
-      <TitleBar title="PICK A STRETCH" />
-      <div className="win-body">
-        <p className="kicker">A LITTLE TOO MUCH LORE</p>
-        <h1 className="pixel-title">Pick a stretch of up to {MAX_SHOTS}.</h1>
+    <section className="range-step">
+        <h1 className="pane-title">That’s a lot of screenshots</h1>
         <p className="body">
-          This roll has {files.length} screenshots after duplicates. One reading stops at {MAX_SHOTS}. The dates below
-          start on the most recent {MAX_SHOTS}.
+          Pick a stretch of up to {MAX_SHOTS}. Then you’ll guess three themes. These dates start on the most recent ones.
         </p>
         {note && <p className="banner">{note}</p>}
         <div className="date-row">
@@ -73,7 +68,6 @@ export function RangeStep({
             Read the most recent {MAX_SHOTS}
           </Button>
         </div>
-      </div>
     </section>
   )
 }

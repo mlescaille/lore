@@ -1,18 +1,4 @@
-import { toPng } from 'html-to-image'
-import { APP_URL } from '../config.ts'
 import type { LoreResult } from '../types.ts'
-
-export function buildCaption(epithet: string, appUrl = APP_URL): string {
-  return `Apparently I'm ${epithet}. Discover your lore: ${appUrl}`
-}
-
-export function xIntent(caption: string): string {
-  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}`
-}
-
-export function linkedInIntent(url = APP_URL): string {
-  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
-}
 
 export function toContract(result: LoreResult): LoreResult {
   return {
@@ -67,29 +53,37 @@ export function downloadJson(result: LoreResult) {
   downloadBlob(blob, 'lore-data.json')
 }
 
+/**
+ * Rasterize the card SVG itself. The pixel title and the body face are embedded
+ * in that SVG, so the saved PNG matches the preview.
+ */
 export async function cardToBlob(node: HTMLElement): Promise<Blob> {
-  const dataUrl = await toPng(node, {
-    cacheBust: true,
-    pixelRatio: 1,
-    backgroundColor: '#24143f',
-    width: node.offsetWidth,
-    height: node.offsetHeight,
-  })
-  const response = await fetch(dataUrl)
-  return response.blob()
-}
-
-export async function shareCard(blob: Blob, filename: string, caption: string): Promise<'shared' | 'downloaded' | 'aborted'> {
-  const file = new File([blob], filename, { type: 'image/png' })
-  if (navigator.share && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], text: caption, title: 'Lore' })
-      return 'shared'
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return 'aborted'
-      throw error
-    }
+  const svg = node.querySelector('svg')
+  if (!svg) throw new Error('Card is not ready')
+  const width = Number(svg.getAttribute('width')) || node.offsetWidth || Number(node.dataset.shareWidth)
+  const height = Number(svg.getAttribute('height')) || node.offsetHeight || Number(node.dataset.shareHeight)
+  const xml = new XMLSerializer().serializeToString(svg)
+  const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }))
+  try {
+    const image = new Image()
+    const loaded = new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error('Could not draw the picture'))
+    })
+    image.src = url
+    await loaded
+    if (document.fonts?.ready) await document.fonts.ready
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Could not draw the picture')
+    context.drawImage(image, 0, 0, width, height)
+    const png = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error('Could not draw the picture'))), 'image/png')
+    })
+    return png
+  } finally {
+    URL.revokeObjectURL(url)
   }
-  downloadBlob(blob, filename)
-  return 'downloaded'
 }

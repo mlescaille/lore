@@ -7,7 +7,7 @@ export interface SavedReading {
   kind: 'sample' | 'own'
   result: LoreResult
   guesses: string[]
-  score: ScoreResult
+  score: ScoreResult | null
 }
 
 const DB_NAME = 'lore'

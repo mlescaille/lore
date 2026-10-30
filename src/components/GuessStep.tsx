@@ -1,95 +1,126 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Progress } from '../useSession.ts'
 import { StatusCard } from './StatusCard.tsx'
-import { TitleBar } from './Window.tsx'
-import { Button } from './ui/button.tsx'
 import { Input } from './ui/input.tsx'
 
-const PLACEHOLDERS = ['a habit', 'a person or place', 'something you kept']
+const PLACEHOLDERS = ['First guess', 'Second guess', 'Third guess']
+
+function BackgroundLine({ ready, progress }: { ready: boolean; progress: Progress }) {
+  const sentence = ready ? 'Your lore is ready.' : progress.detail || progress.label
+  if (!sentence) return null
+  return (
+    <p className="bg-progress" role="status">
+      {sentence}
+    </p>
+  )
+}
 
 export function GuessStep({
-  kind,
   ready,
   holding,
+  picking,
   progress,
   note,
   onSubmit,
+  onValidity,
+  onGuess,
+  onSkip,
 }: {
   kind: 'sample' | 'own'
   ready: boolean
   holding: boolean
+  picking: boolean
   progress: Progress
   note: string
   onSubmit: (guesses: string[], block: string) => void
+  onValidity?: (ok: boolean) => void
+  onGuess: () => void
+  onSkip: () => void
 }) {
   const [values, setValues] = useState(['', '', ''])
   const [block, setBlock] = useState('')
   const complete = values.every((value) => value.trim().length >= 2)
-  const locked = holding
 
-  return (
-    <div className="guess-grid">
-      <form
-        className="win guess-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          if (!complete || locked) return
-          onSubmit(values, block)
-        }}
-      >
-        <TitleBar title="GUESS.EXE" />
-        <div className="win-body">
-          <p className="kicker">STEP 2 OF 2 · NAME THE YEAR</p>
-          <h1 className="pixel-title">What do you think this year was about?</h1>
-          <p className="body">Three themes, in your own words. There are no wrong answers. Only screenshots.</p>
-          <div className="guess-fields">
-            {values.map((value, index) => (
-              <label className="guess-field" key={index}>
-                <span className="idx">0{index + 1}</span>
-                <Input
-                  value={value}
-                  placeholder={PLACEHOLDERS[index]}
-                  maxLength={48}
-                  autoComplete="off"
-                  enterKeyHint={index === 2 ? 'done' : 'next'}
-                  aria-label={`Theme ${index + 1}`}
-                  disabled={locked}
-                  onChange={(event) => {
-                    const next = [...values]
-                    next[index] = event.target.value
-                    setValues(next)
-                  }}
-                />
-              </label>
-            ))}
-          </div>
-          <details className="leave-out">
-            <summary>Leave words out</summary>
-            <p className="body">Names, a workplace, anything that should be dropped before themes. We only keep a count.</p>
-            <Input
-              value={block}
-              placeholder="comma-separated words"
-              aria-label="Words to leave out"
-              disabled={locked}
-              onChange={(event) => setBlock(event.target.value)}
-            />
-          </details>
-          <div className="actions">
-            <Button type="submit" size="lg" disabled={!complete || locked}>
-              {locked ? 'Holding your guess' : "That's my guess"}
-            </Button>
-          </div>
-          {locked && !ready && <p className="note">We’ll open the record the moment the read finishes.</p>}
-          {ready && !locked && <p className="note">The roll is ready. Nothing shows until you guess.</p>}
-        </div>
-      </form>
+  useEffect(() => {
+    onValidity?.(complete && !holding && !picking)
+  }, [complete, holding, picking, onValidity])
+
+  if (holding) {
+    return (
       <StatusCard
-        eyebrow={kind === 'sample' ? 'SAMPLE ROLL' : 'ON THIS DEVICE'}
-        title={progress.label}
-        detail={note || 'Names stay hidden until you commit.'}
+        title="Still working"
+        detail={progress.detail || progress.label}
         done={progress.done}
         total={progress.total}
       />
-    </div>
+    )
+  }
+
+  if (picking) {
+    return (
+      <div className="guess-choice">
+        <h1 className="pane-title">Want to guess?</h1>
+        <p className="body">Name three themes first, or skip ahead to your portrait.</p>
+        <div className="choice-actions">
+          <button type="button" className="btn btn-primary" onClick={onGuess}>
+            Guess first
+          </button>
+          <button type="button" className="btn" onClick={onSkip}>
+            Just show me my lore
+          </button>
+        </div>
+        {note && <p className="note">{note}</p>}
+        <BackgroundLine ready={ready} progress={progress} />
+      </div>
+    )
+  }
+
+  return (
+    <form
+      id="lore-guess"
+      className="guess-form"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (!complete) return
+        onSubmit(values, block)
+      }}
+    >
+      <h1 className="pane-title">Before we look</h1>
+      <p className="body">What do you think you screenshot most? Pick 3.</p>
+      <div className="guess-fields">
+        {values.map((value, index) => (
+          <label className="guess-field" key={index}>
+            <span className="idx">{index + 1}</span>
+            <Input
+              value={value}
+              placeholder={PLACEHOLDERS[index]}
+              maxLength={48}
+              autoComplete="off"
+              enterKeyHint={index === 2 ? 'done' : 'next'}
+              aria-label={`Theme ${index + 1}`}
+              onChange={(event) => {
+                const next = [...values]
+                next[index] = event.target.value
+                setValues(next)
+              }}
+            />
+          </label>
+        ))}
+      </div>
+      <label className="block-field">
+        Leave a name out (optional)
+        <Input
+          value={block}
+          placeholder="a name or a workplace"
+          aria-label="Words to leave out"
+          onChange={(event) => setBlock(event.target.value)}
+        />
+      </label>
+      {note && <p className="note">{note}</p>}
+      <BackgroundLine ready={ready} progress={progress} />
+      <button type="button" className="skip-link" onClick={onSkip}>
+        Skip guessing
+      </button>
+    </form>
   )
 }

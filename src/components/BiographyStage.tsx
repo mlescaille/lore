@@ -1,60 +1,49 @@
 import { useEffect, useRef, useState } from 'react'
-import { buildCaption, cardToBlob, downloadBlob, linkedInIntent, shareCard, xIntent } from '../share/export.ts'
+import { cardPixels, defaultShareSize, shareCardFromResult, type CardSize } from '../share/card.ts'
+import { cardToBlob } from '../share/export.ts'
+import {
+  buildPostText,
+  copyImage,
+  copyLink,
+  pictureNotice,
+  presentLore,
+  sharePlatform,
+  type SharePlatform,
+} from '../share/post.ts'
 import type { ScoreResult } from '../pipeline/scoring.ts'
-import { colorForTheme, formatRange } from '../lib/format.ts'
 import type { LoreResult } from '../types.ts'
-import { CardFace, type CardModel } from './CardFace.tsx'
-import { TitleBar } from './Window.tsx'
+import { CardFace } from './CardFace.tsx'
 import { Button } from './ui/button.tsx'
 
-function modelFor(result: LoreResult, score: ScoreResult, size: 'square' | 'story'): CardModel {
-  const denom = Math.max(result.records.length, 1)
-  const top = [...result.themes].sort((a, b) => b.count - a.count).slice(0, 3)
-  const start = result.records[0]?.timestamp ?? result.chapters[0]?.start
-  const end = result.records[result.records.length - 1]?.timestamp ?? result.chapters[result.chapters.length - 1]?.end
-  const spans = result.chapters.map((chapter) => Math.max(1, new Date(chapter.end).getTime() - new Date(chapter.start).getTime()))
-  const spanSum = spans.reduce((sum, value) => sum + value, 0) || 1
-  return {
-    epithet: result.biography.epithet,
-    closingLine: result.biography.closingLine,
-    rangeLabel: start && end ? formatRange(start, end) : 'This reading',
-    total: result.records.length,
-    themes: top.map((theme) => ({
-      label: theme.label,
-      share: theme.count / denom,
-      color: colorForTheme(theme.id, result.themes),
-    })),
-    guesses: score.matches.map((match) => ({
-      guess: match.guess,
-      matchLabel: match.themeLabel,
-      matched: match.matched,
-    })),
-    eras: result.chapters.map((chapter, index) => ({
-      label: chapter.title,
-      share: (spans[index] ?? 1) / spanSum,
-      color: colorForTheme(chapter.themeId, result.themes),
-    })),
-    size,
-  }
+function filenameFor(size: CardSize): string {
+  return size === 'story' ? 'lore-story.png' : 'lore-square.png'
 }
 
-export function BiographyStage({ result, score }: { result: LoreResult; score: ScoreResult }) {
-  const [size, setSize] = useState<'square' | 'story'>('square')
+export function BiographyStage({
+  result,
+  score,
+  guessed,
+}: {
+  result: LoreResult
+  score: ScoreResult | null
+  guessed: boolean
+}) {
+  const [size, setSize] = useState<CardSize>(() =>
+    defaultShareSize(typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches),
+  )
   const [width, setWidth] = useState(640)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
-  const [canShare, setCanShare] = useState(false)
   const frameRef = useRef<HTMLDivElement>(null)
-  const exportRef = useRef<HTMLDivElement>(null)
-  const model = modelFor(result, score, size)
-  const scale = Math.min(1, width / 1080)
-  const height = (size === 'story' ? 1920 : 1080) * scale
-  const caption = buildCaption(result.biography.epithet)
-  const filename = size === 'story' ? 'lore-story.png' : 'lore-square.png'
-
-  useEffect(() => {
-    setCanShare(typeof navigator !== 'undefined' && 'share' in navigator)
-  }, [])
+  const squareRef = useRef<HTMLDivElement>(null)
+  const storyRef = useRef<HTMLDivElement>(null)
+  const preview = shareCardFromResult(result, score, guessed, size)
+  const squareModel = shareCardFromResult(result, score, guessed, 'square')
+  const storyModel = shareCardFromResult(result, score, guessed, 'story')
+  const pixels = cardPixels(size)
+  const scale = Math.min(1, width / pixels.width)
+  const frameHeight = pixels.height * scale
+  const postText = buildPostText(preview.themes)
 
   useEffect(() => {
     const node = frameRef.current
@@ -65,8 +54,8 @@ export function BiographyStage({ result, score }: { result: LoreResult; score: S
     return () => observer.disconnect()
   }, [])
 
-  async function png() {
-    const node = exportRef.current
+  async function png(which: CardSize) {
+    const node = which === 'story' ? storyRef.current : squareRef.current
     if (!node) throw new Error('Card is not ready')
     return cardToBlob(node)
   }
@@ -76,103 +65,101 @@ export function BiographyStage({ result, score }: { result: LoreResult; score: S
     setNotice('')
     try {
       await action()
-    } catch {
-      setNotice('Could not build the image. You can still copy the caption.')
+    } catch (error) {
+      console.error('Lore failed during share', error)
+      setNotice('Could not build the image. You can still copy the link.')
     } finally {
       setBusy(false)
     }
   }
 
+  function show(outcome: 'shared' | 'copied' | 'saved' | 'aborted') {
+    const message = pictureNotice(outcome)
+    if (message) setNotice(message)
+  }
+
+  async function shareSelected() {
+    const blob = await png(size)
+    show(await presentLore(blob, filenameFor(size), postText))
+  }
+
+  async function shareOn(platform: SharePlatform) {
+    const blob = await png(size)
+    show(await sharePlatform(platform, blob, filenameFor(size), postText))
+  }
+
   return (
-    <section className="win card-stage">
-      <TitleBar title="CARD.EXE" />
-      <div className="win-body">
-      <div className="timeline-head">
-        <div>
-          <p className="kicker">YOUR CARD</p>
-          <h2 className="pixel-title">Share the lore, not the screenshots.</h2>
-        </div>
-        <div className="segmented" role="group" aria-label="Card size">
-          <button type="button" className={size === 'square' ? 'is-on' : ''} onClick={() => setSize('square')}>
+    <section className="share-panel card-stage" aria-label="Share">
+      <h2 className="share-title">Share</h2>
+      <div className="share-body">
+        <p className="body">Share the picture of your lore. It uses your themes only. Nothing is uploaded.</p>
+        <div className="segmented" role="group" aria-label="Picture shape">
+          <button type="button" className={size === 'square' ? 'btn is-on' : 'btn'} onClick={() => setSize('square')}>
             Square
           </button>
-          <button type="button" className={size === 'story' ? 'is-on' : ''} onClick={() => setSize('story')}>
+          <button type="button" className={size === 'story' ? 'btn is-on' : 'btn'} onClick={() => setSize('story')}>
             Story
           </button>
         </div>
-      </div>
-      <div className="card-frame" ref={frameRef} style={{ height }}>
-        <div style={{ width: 1080, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-          <CardFace model={model} />
+        <div className="card-frame share-preview" ref={frameRef}>
+          <div style={{ width: '100%', height: frameHeight, overflow: 'hidden' }}>
+            <div style={{ width: pixels.width, height: pixels.height, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+              <CardFace model={preview} />
+            </div>
+          </div>
         </div>
-      </div>
-      <div className="export-host" aria-hidden="true">
-        <CardFace model={model} nodeRef={exportRef} />
-      </div>
-      <div className="actions">
-        <Button size="lg" disabled={busy} onClick={() => run(async () => downloadBlob(await png(), filename))}>
-          {busy ? 'Making the image…' : 'Download PNG'}
+        <div className="export-host" aria-hidden="true">
+          <CardFace model={squareModel} nodeRef={squareRef} exported />
+          <CardFace model={storyModel} nodeRef={storyRef} exported />
+        </div>
+        <Button className="share-main" disabled={busy} onClick={() => run(shareSelected)}>
+          Share my lore
         </Button>
-        {canShare && (
-          <Button
-            size="lg"
-            variant="paper"
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                const outcome = await shareCard(await png(), filename, caption)
-                if (outcome === 'downloaded') setNotice('This browser can’t share the file, so the image downloaded instead.')
-              })
-            }
-          >
-            Share
-          </Button>
-        )}
-        <div className="share-desktop">
-          <Button
-            size="lg"
-            variant="ghost"
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                downloadBlob(await png(), filename)
-                window.open(xIntent(caption), '_blank', 'noopener,noreferrer')
-              })
-            }
-          >
+        <h3 className="share-group">Or post it on</h3>
+        <div className="share-actions">
+          <Button disabled={busy} onClick={() => run(() => shareOn('x'))}>
             Post to X
           </Button>
-          <Button
-            size="lg"
-            variant="ghost"
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                downloadBlob(await png(), filename)
-                await navigator.clipboard.writeText(caption).catch(() => {})
-                window.open(linkedInIntent(), '_blank', 'noopener,noreferrer')
-                setNotice('Caption copied. LinkedIn only takes the link, so paste the line if you want it. The image downloaded too.')
-              })
-            }
-          >
+          <Button disabled={busy} onClick={() => run(() => shareOn('instagram'))}>
+            Post to Instagram
+          </Button>
+          <Button disabled={busy} onClick={() => run(() => shareOn('threads'))}>
+            Post to Threads
+          </Button>
+          <Button disabled={busy} onClick={() => run(() => shareOn('linkedin'))}>
             Post to LinkedIn
           </Button>
         </div>
-        <Button
-          size="lg"
-          variant="quiet"
-          onClick={() => {
-            void navigator.clipboard.writeText(caption).then(
-              () => setNotice('Caption copied.'),
-              () => setNotice(caption),
-            )
-          }}
-        >
-          Copy caption
-        </Button>
-      </div>
-      {notice && <p className="note">{notice}</p>}
-      <p className="caption-preview">{caption}</p>
+        <h3 className="share-group">Copy</h3>
+        <div className="share-actions">
+          <Button
+            disabled={busy}
+            onClick={() =>
+              run(async () => {
+                const outcome = await copyImage(await png(size), filenameFor(size))
+                show(outcome)
+              })
+            }
+          >
+            Copy image
+          </Button>
+          <Button
+            onClick={() => {
+              setNotice('')
+              void copyLink().then((outcome) => {
+                setNotice(outcome === 'copied' ? 'Copied!' : 'Could not copy the link.')
+              })
+            }}
+          >
+            Copy link
+          </Button>
+        </div>
+        {notice && (
+          <p className="banner" role="status">
+            {notice}
+          </p>
+        )}
+        <p className="caption-preview">{postText}</p>
       </div>
     </section>
   )

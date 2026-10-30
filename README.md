@@ -1,6 +1,6 @@
 # Lore
 
-Discover your lore. Lore treats a set of screenshots as a diary you didn’t agree to write: you guess the top three themes, then the app shows the patterns, scores the guess by meaning, and ends on a playful biography card.
+Discover your lore. You drop in your screenshots, guess the three things you think you save most, and Lore shows a short portrait of you based on what you actually kept.
 
 Everything that touches your pictures runs in the browser. There is no backend and no account.
 
@@ -11,18 +11,20 @@ Nothing is uploaded. The page never sends screenshot bytes, OCR text, or guesses
 What does leave the device, and only if you ask:
 
 - The first time you read **your own** screenshots, the text reader downloads an English language file from a CDN (jsDelivr, tesseract.js). After that it stays in the browser cache.
-- If the small meaning model can load, it downloads once from Hugging Face (`onnx-community/all-MiniLM-L6-v2-ONNX`) and runs locally. If it cannot, themes are grouped by word overlap instead. The sample set never downloads a model.
+- The first time you read your own pictures, a small vision model downloads once from Hugging Face (`Xenova/mobileclip_s0`, about 90 MB) and runs locally. A progress bar on the installer shows the download. It is how Lore can name a photo that has little or no text. If it cannot load, themes fall back to cleaned words. The sample set never downloads it. That model runs in the page (`onnxruntime-web`). It does not use `onnxruntime-node` or `sharp`, so `npm ci` skipping install scripts (`npm install-scripts ls`) does not affect the dev server or the browser build. Those scripts only fetch a native binary for Node, or print a notice.
+- If the small meaning model can load, it downloads once from Hugging Face (`onnx-community/all-MiniLM-L6-v2-ONNX`) and runs locally, only to score your guess against the theme names. If it cannot, the guess is scored by word overlap instead.
 - Sharing opens X or LinkedIn with a caption made only of the epithet and a link. The card image is a download, not an upload. The caption never includes screenshot text.
 
 What stays, and how it is thrown away:
 
 1. Files are read locally. Duplicates drop out by a hash of the bytes.
 2. Text is read on device (your files) or taken from the sample manifest (the sample set).
-3. **Exclusion runs before themes, chapters, or display.** Account, card, routing, and IBAN-like numbers, a built-in medical word list, and any words you type under “Leave words out” remove the whole record. Only counts remain.
-4. The biography card uses theme names, counts, and dates. Never the words from a screenshot.
-5. `data.json` is an explicit download of the reading, including OCR text. The card is not.
-6. “Keep this reading on this device” writes the reading (not the image files) to IndexedDB. It is off until you turn it on.
-7. **Forget** deletes that database, drops the in-memory reading, and revokes image URLs. Your original files are untouched.
+3. **Exclusion runs before themes, chapters, or display.** Account, card, routing, and IBAN-like numbers, a built-in medical word list, and any words you type under “Leave words out” remove the whole record. Only counts remain. The check sees the raw read; themes never do.
+4. Low-confidence OCR, fragments, and tokens like `150k` are dropped before any theme is named. Theme names are human labels (Celebrations, Diagrams), not leftover tokens.
+5. The portrait and the shared picture use theme names, counts, dates, and a one-line title. Never the words from a screenshot, and never the pictures themselves.
+6. `data.json` is an explicit download of the reading, including OCR text. The shared picture is not.
+7. “Keep this reading on this device” writes the reading (not the image files) to IndexedDB. It is off until you turn it on.
+8. **Forget** deletes that database, drops the in-memory reading, and revokes image URLs. Your original files are untouched.
 
 Dates come from the photo’s EXIF time, then from iOS, macOS, and Android filename patterns, then from the file’s last-modified time. That last source is marked low confidence (a hollow dot). Whether iOS keeps EXIF when you pick from Photos is still something to check on a real phone — the picker has been known to strip it, which makes every date look like “today.”
 
@@ -35,7 +37,7 @@ npm run dev
 
 Open [http://127.0.0.1:4317/lore/](http://127.0.0.1:4317/lore/). The app is built to live under `/lore`.
 
-The interface is one original retro installer: pixel chrome for windows and buttons, Atkinson Hyperlegible for anything you read or type, beveled panels, and a trading-card biography. There is no theme switch.
+The interface is a short sequence of windows: drop screenshots in, guess three themes, then read the portrait. Silkscreen is the logo and the headings. Atkinson Hyperlegible is everything you read. The window frame is the only chrome.
 
 ```bash
 npm test          # exclusion, timestamps, chaptering, scoring, sample coherence
@@ -64,7 +66,7 @@ That writes `public/sample/<id>.png`. “Load sample” then runs the real theme
 
 On an Astro site on Vercel, copy `dist/` into the site’s `public/lore/` directory (so `index.html` is served at `/lore/` and `/lore/assets/…` resolves), or rewrite `/lore` and `/lore/*` to this build. Do not strip the base path.
 
-`APP_URL` in `src/config.ts` is `https://mlescaille.com/lore`, the link inside the share caption. `ESSAY_URL`, the footer link “the idea behind Lore”, is still a placeholder.
+`SHARE_URL` in `src/config.ts` is `https://mlescaille.com/lore`, the link in share posts. `ESSAY_URL`, the link “the idea behind Lore”, is `https://www.mlescaille.com/writing/lore-screenshots-as-your-bio/`.
 
 ## Not in v1
 

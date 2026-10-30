@@ -1,4 +1,5 @@
 import { dateFromExif, resolveTimestamp, type TimestampSource } from './timestamps.ts'
+import { timed } from './timing.ts'
 
 export interface PreparedFile {
   id: string
@@ -17,15 +18,17 @@ export interface PrepareResult {
 
 const EXT = /\.(png|jpe?g|heic|heif)$/i
 
-export function isImageFile(file: File): boolean {
-  const type = file.type.toLowerCase()
+export function isImageFile(file: { type?: unknown; name?: unknown } | null | undefined): boolean {
+  if (!file) return false
+  const type = typeof file.type === 'string' ? file.type.toLowerCase() : ''
+  const name = typeof file.name === 'string' ? file.name : ''
   return (
     type === 'image/png' ||
     type === 'image/jpeg' ||
     type === 'image/jpg' ||
     type === 'image/heic' ||
     type === 'image/heif' ||
-    EXT.test(file.name)
+    EXT.test(name)
   )
 }
 
@@ -34,37 +37,60 @@ function isHeic(file: File): boolean {
   return type.includes('heic') || type.includes('heif') || /\.hei[cf]$/i.test(file.name)
 }
 
-async function sha256(file: File): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+async function fileId(file: File): Promise<string> {
+  const bytes = await file.arrayBuffer()
+  const subtle = globalThis.crypto?.subtle
+  if (subtle) {
+    try {
+      const digest = await subtle.digest('SHA-256', bytes)
+      return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+    } catch (error) {
+      console.error('Lore failed during open', file.name, error)
+    }
+  }
+  let hash = 2166136261
+  const view = new Uint8Array(bytes)
+  for (let index = 0; index < view.length; index += 97) {
+    hash ^= view[index]
+    hash = Math.imul(hash, 16777619)
+  }
+  return `file-${(hash >>> 0).toString(16)}-${view.length}`
 }
 
 async function toBitmap(file: File): Promise<Blob> {
   if (!isHeic(file)) return file
-  const heic2any = (await import('heic2any')).default
-  const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.82 })
-  return Array.isArray(converted) ? converted[0] : converted
+  return timed('heic', async () => {
+    const heic2any = (await import('heic2any')).default
+    const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.82 })
+    return Array.isArray(converted) ? converted[0] : converted
+  })
 }
 
 export async function prepareFiles(
-  files: File[],
+  files: ArrayLike<File>,
   onProgress?: (done: number, total: number, label: string) => void,
   shouldContinue: () => boolean = () => true,
 ): Promise<PrepareResult> {
-  const images = files.filter(isImageFile)
-  const skipped = files.length - images.length
+  const list = Array.from(files ?? [])
+  const images = list.filter((file) => isImageFile(file))
+  const skipped = list.length - images.length
   const seen = new Set<string>()
   const prepared: PreparedFile[] = []
   let duplicates = 0
   let unreadable = 0
-  const exifr = await import('exifr')
+  let exifr: typeof import('exifr') | null = null
+  try {
+    exifr = await import('exifr')
+  } catch (error) {
+    console.error('Lore failed during dates', error)
+  }
 
   for (let index = 0; index < images.length; index++) {
     if (!shouldContinue()) break
     const file = images[index]
     onProgress?.(index, images.length, index === 0 ? 'Checking for duplicates' : 'Reading dates')
     try {
-      const hash = await sha256(file)
+      const hash = await fileId(file)
       if (seen.has(hash)) {
         duplicates += 1
         continue
@@ -72,7 +98,7 @@ export async function prepareFiles(
       seen.add(hash)
       let exifDate: Date | null = null
       try {
-        const parsed = (await exifr.default.parse(file, ['DateTimeOriginal', 'CreateDate', 'ModifyDate'])) as
+        const parsed = (await exifr?.default?.parse(file, ['DateTimeOriginal', 'CreateDate', 'ModifyDate'])) as
           | { DateTimeOriginal?: unknown; CreateDate?: unknown; ModifyDate?: unknown }
           | undefined
         exifDate =
@@ -91,8 +117,9 @@ export async function prepareFiles(
         timestamp: time.iso,
         timestampSource: time.source,
       })
-    } catch {
+    } catch (error) {
       unreadable += 1
+      console.error('Lore failed during open', file.name, error)
     }
   }
 

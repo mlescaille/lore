@@ -28,7 +28,9 @@ const CONCEPTS: string[][] = [
   ['recipe', 'cook', 'cooking', 'pasta', 'dinner', 'ingredient', 'oven', 'bake', 'baking', 'kitchen', 'miso', 'cookie', 'grocery', 'risotto'],
   ['work', 'office', 'figma', 'critique', 'sprint', 'client', 'design', 'mock', 'layout', 'slack', 'ticket'],
   ['fitness', 'run', 'running', 'mile', 'workout', 'gym', 'pace', 'marathon', 'interval', 'tempo', 'training', 'race'],
-  ['friend', 'chat', 'gremlin', 'meme', 'brunch', 'karaoke', 'group'],
+  ['friend', 'friends', 'family', 'people', 'chat', 'gremlin', 'meme', 'brunch', 'karaoke', 'group', 'portrait'],
+  ['celebration', 'party', 'birthday', 'wedding', 'toast', 'gathering', 'festival', 'celebrate'],
+  ['tech', 'technology', 'software', 'computer', 'diagram', 'system', 'systems', 'latency', 'consistency', 'architecture', 'learning', 'algorithm', 'protocol', 'availability', 'partition'],
 ]
 
 const CONCEPT_OF = new Map<string, string>()
@@ -63,15 +65,23 @@ export function vectorMatrix(guessVectors: number[][], themeVectors: number[][])
   return guessVectors.map((guess) => themeVectors.map((theme) => cosine(guess, theme)))
 }
 
+/** The themes the portrait shows: top three by count, id as the tie-break. */
+export function topThemes<T extends { id: string; count: number }>(themes: T[]): T[] {
+  return [...themes].sort((a, b) => b.count - a.count || a.id.localeCompare(b.id)).slice(0, 3)
+}
+
 /**
  * Greedy one-to-one assignment. A guess matches when its best remaining theme
  * clears the threshold. Each theme can satisfy only one guess.
+ * Only the displayed top 3 can count as a match.
  */
 export function assignMatches(guesses: string[], themes: ScoreTheme[], matrix: number[][], threshold: number): ScoreResult {
   const clean = guesses.map((guess) => guess.trim()).filter(Boolean)
+  const allowed = new Set(topThemes(themes).map((theme) => themes.indexOf(theme)))
   const pairs: { gi: number; ti: number; sim: number }[] = []
   for (let gi = 0; gi < clean.length; gi++) {
     for (let ti = 0; ti < themes.length; ti++) {
+      if (!allowed.has(ti)) continue
       pairs.push({ gi, ti, sim: matrix[gi]?.[ti] ?? 0 })
     }
   }
@@ -92,7 +102,7 @@ export function assignMatches(guesses: string[], themes: ScoreTheme[], matrix: n
     const hit = assigned.get(gi)
     if (!hit) {
       let best = 0
-      for (let ti = 0; ti < themes.length; ti++) best = Math.max(best, matrix[gi]?.[ti] ?? 0)
+      for (const ti of allowed) best = Math.max(best, matrix[gi]?.[ti] ?? 0)
       return { guess, themeId: null, themeLabel: null, similarity: best, matched: false }
     }
     const theme = themes[hit.ti]
@@ -105,10 +115,7 @@ export function assignMatches(guesses: string[], themes: ScoreTheme[], matrix: n
     }
   })
 
-  const topThemeIds = [...themes]
-    .sort((a, b) => b.count - a.count || a.id.localeCompare(b.id))
-    .slice(0, 3)
-    .map((theme) => theme.id)
+  const topThemeIds = topThemes(themes).map((theme) => theme.id)
 
   return {
     matches,
@@ -116,6 +123,17 @@ export function assignMatches(guesses: string[], themes: ScoreTheme[], matrix: n
     guessCount: clean.length,
     topThemeIds,
   }
+}
+
+/** True when the person typed at least one guess. A skip is not a guess. */
+export function hasGuess(guesses: string[]): boolean {
+  return guesses.some((guess) => guess.trim().length > 0)
+}
+
+/** One plain sentence for the guess. "You got 2 of 3 right." */
+export function scoreSentence(matched: number, total: number): string {
+  if (total <= 0) return 'You did not make a guess.'
+  return `You got ${matched} of ${total} right.`
 }
 
 export function scoreGuessesLexically(guesses: string[], themes: ScoreTheme[], threshold = 0.5): ScoreResult {

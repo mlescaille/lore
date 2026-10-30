@@ -1,8 +1,9 @@
-/** ESSAY_URL stays a placeholder until the essay exists. APP_URL is the public site. */
-export const ESSAY_URL = 'https://example.com/the-screenshot-as-autobiography'
-export const APP_URL = 'https://mlescaille.com/lore'
+/** SHARE_URL is the public Lore link in posts and the share card. ESSAY_URL is the published companion essay. */
+export const ESSAY_URL = 'https://www.mlescaille.com/writing/lore-screenshots-as-your-bio/'
+export const SHARE_URL = 'https://mlescaille.com/lore'
+export const APP_URL = SHARE_URL
 
 export const MAX_SHOTS = 500
 
-export const THEME_COLORS = ['#ff4fa3', '#ffe14a', '#67f2e4', '#c084fc', '#ff8a3d', '#7dffb3']
-export const VIBES_COLOR = '#b9a6d6'
+export const THEME_COLORS = ['#a33b24', '#163e48', '#f0b429']
+export const VIBES_COLOR = '#163e48'

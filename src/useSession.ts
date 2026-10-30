@@ -5,21 +5,24 @@ import { closingForScore } from './pipeline/biography.ts'
 import { filesFromDataTransfer } from './pipeline/drop.ts'
 import { prepareFiles, type PreparedFile } from './pipeline/ingest.ts'
 import { parseBlocklist } from './pipeline/exclusion.ts'
-import { assignMatches, scoreGuessesLexically, vectorMatrix, type ScoreResult } from './pipeline/scoring.ts'
+import { assignMatches, hasGuess, scoreGuessesLexically, vectorMatrix, type ScoreResult } from './pipeline/scoring.ts'
 import { SAMPLE_SHOTS, sampleText } from './sample/manifest.ts'
 import { sampleImageUrl } from './sample/images.ts'
+import { backgroundSentence, clampCount, startBackgroundReading, type BackgroundReading } from './session/background.ts'
 import { forgetAll, loadSaved, saveReading, type SavedReading } from './storage/idb.ts'
+import type { VisualHit } from './pipeline/signals.ts'
 import type { InputShot, LoreResult } from './types.ts'
 
 export interface Progress {
   label: string
   done: number
   total: number
+  detail?: string
 }
 
 export interface RevealModel {
   result: LoreResult
-  score: ScoreResult
+  score: ScoreResult | null
   guesses: string[]
   kind: 'sample' | 'own'
   note: string
@@ -30,10 +33,10 @@ export type Phase =
   | { type: 'landing' }
   | { type: 'preparing'; progress: Progress }
   | { type: 'range'; files: PreparedFile[]; note: string }
-  | { type: 'guess'; kind: 'sample' | 'own'; ready: boolean; progress: Progress; note: string; holding: boolean }
-  | { type: 'finishing'; label: string }
+  | { type: 'guess'; kind: 'sample' | 'own'; ready: boolean; progress: Progress; note: string; holding: boolean; picking: boolean }
+  | { type: 'finishing'; label: string; detail?: string; done?: number; total?: number }
   | { type: 'reveal'; model: RevealModel }
-  | { type: 'error'; message: string }
+  | { type: 'error'; message: string; step: 1 | 2 | 3 }
 
 interface Job {
   kind: 'sample' | 'own'
@@ -41,20 +44,27 @@ interface Job {
   note: string
 }
 
+interface CachedLore {
+  result: LoreResult
+  visual: Map<string, VisualHit[]>
+  shots: InputShot[]
+}
+
 const SAMPLE_NOTE =
   'Jules’s pictures ship with the words already read, so this pass skips the optical reader. Your own screenshots are read on this device.'
 
-function pause(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-async function scoreReading(guesses: string[], result: LoreResult, kind: 'sample' | 'own'): Promise<ScoreResult> {
+async function scoreReading(
+  guesses: string[],
+  result: LoreResult,
+  kind: 'sample' | 'own',
+  onProgress?: (done: number, total: number) => void,
+): Promise<ScoreResult> {
   if (kind === 'own' && result.themes.length > 0) {
     try {
       const { embedTexts } = await import('./pipeline/embed.ts')
       const clean = guesses.map((guess) => guess.trim()).filter(Boolean)
       const labels = result.themes.map((theme) => `${theme.label}. ${theme.keywords.join(', ')}`)
-      const vectors = await embedTexts([...clean, ...labels])
+      const vectors = await embedTexts([...clean, ...labels], onProgress)
       const matrix = vectorMatrix(vectors.slice(0, clean.length), vectors.slice(clean.length))
       return assignMatches(clean, result.themes, matrix, 0.36)
     } catch {
@@ -73,8 +83,11 @@ export function useSession() {
   const runId = useRef(0)
   const job = useRef<Job | null>(null)
   const pending = useRef<{ guesses: string[]; block: string } | null>(null)
+  const pickingRef = useRef(true)
   const readyRef = useRef(false)
   const finishing = useRef(false)
+  const loreRun = useRef<BackgroundReading<CachedLore> | null>(null)
+  const loreCache = useRef<CachedLore | null>(null)
   const blobs = useRef(new Map<string, Blob>())
   const images = useRef(new Map<string, string>())
   const urls = useRef(new Map<string, string>())
@@ -128,63 +141,74 @@ export function useSession() {
   }, [])
 
   const finish = useCallback(async () => {
-    if (finishing.current || !readyRef.current) return
+    if (finishing.current) return
     const guess = pending.current
     const current = job.current
-    if (!guess || !current) return
+    const run = loreRun.current
+    if (!guess || !current || !run) return
     finishing.current = true
     const token = runId.current
     try {
-      setPhase({ type: 'finishing', label: 'Setting aside anything sensitive' })
-      await pause(280)
-      if (runId.current !== token) return
-      const embed =
-        current.kind === 'own'
-          ? async (texts: string[]) => {
-              setPhase({ type: 'finishing', label: 'Loading a small meaning model. It stays on this device.' })
-              const { embedTexts } = await import('./pipeline/embed.ts')
-              return embedTexts(texts, (done, total) => {
-                if (runId.current !== token) return
-                setPhase({ type: 'finishing', label: `Finding the patterns · ${done} of ${total}` })
-              })
-            }
-          : undefined
-      if (!embed) {
-        setPhase({ type: 'finishing', label: 'Finding the patterns' })
-        await pause(420)
+      const cached = loreCache.current ?? (await run.result())
+      if (runId.current !== token || !cached) return
+      let result = cached.result
+      const block = parseBlocklist(guess.block)
+      if (block.length > 0) {
+        result = await analyzeShots(cached.shots, {
+          blocklist: block,
+          perceive: async () => cached.visual,
+          runDate: new Date().toISOString(),
+        })
       }
       if (runId.current !== token) return
-      const result = await analyzeShots(current.shots, {
-        blocklist: parseBlocklist(guess.block),
-        embed,
-        runDate: new Date().toISOString(),
-      })
-      if (runId.current !== token) return
-      setPhase({ type: 'finishing', label: 'Writing the biography' })
-      const score = await scoreReading(guess.guesses, result, current.kind)
+      const names = guess.guesses.map((item) => item.trim()).filter(Boolean)
+      let score: ScoreResult | null = null
+      if (hasGuess(names)) {
+        if (current.kind === 'own') {
+          setPhase({
+            type: 'finishing',
+            label: 'Loading a small meaning model. It stays on this device.',
+            detail: 'Used only to score your guess against the themes.',
+          })
+        }
+        score = await scoreReading(names, result, current.kind, (done, total) => {
+          if (runId.current !== token) return
+          setPhase({ type: 'finishing', label: `Scoring the guess · ${done} of ${total}` })
+        })
+      }
       result.biography.closingLine =
         result.records.length === 0
           ? 'The sensitive-text check kept the whole set back. Only the count remains.'
-          : closingForScore(score.matchedCount, score.guessCount)
+          : score
+            ? closingForScore(score.matchedCount, score.guessCount)
+            : 'Here is what you keep saving.'
       const keep = new Set(result.records.map((record) => record.id))
       for (const id of [...blobs.current.keys()]) if (!keep.has(id)) blobs.current.delete(id)
       for (const id of [...images.current.keys()]) if (!keep.has(id)) images.current.delete(id)
-      await pause(320)
       if (runId.current !== token) return
       setPhase({
         type: 'reveal',
         model: {
           result,
           score,
-          guesses: guess.guesses.map((item) => item.trim()).filter(Boolean),
+          guesses: names,
           kind: current.kind,
           note: current.note,
           kept: false,
         },
       })
-    } catch {
+    } catch (error) {
+      console.error('Lore failed during lore', error)
       if (runId.current !== token) return
-      setPhase({ type: 'error', message: 'The reading stopped on this device. Nothing was uploaded. You can try again.' })
+      const detail = error instanceof Error ? error.message : ''
+      const download = /fetch|network|failed to fetch|huggingface|http/i.test(detail)
+      setPhase({
+        type: 'error',
+        step: 3,
+        message: download
+          ? "The picture model didn't download. Check your connection and try again."
+          : 'The reading stopped on this computer. Nothing was uploaded.',
+      })
     } finally {
       finishing.current = false
     }
@@ -193,65 +217,92 @@ export function useSession() {
   const beginOwn = useCallback(
     async (files: PreparedFile[], note: string) => {
       const token = runId.current
+      loreRun.current?.cancel()
+      loreRun.current = null
+      loreCache.current = null
       revoke()
       blobs.current = new Map(files.map((file) => [file.id, file.blob]))
       images.current.clear()
       readyRef.current = false
+      pickingRef.current = !pending.current
       setPhase({
         type: 'guess',
         kind: 'own',
         ready: false,
         holding: Boolean(pending.current),
-        progress: { label: 'Reading the words', done: 0, total: files.length },
+        picking: pickingRef.current,
+        progress: {
+          label: backgroundSentence('words', 0, files.length),
+          detail: backgroundSentence('words', 0, files.length),
+          done: 0,
+          total: files.length,
+        },
         note,
       })
-      try {
-        const { recognizeAll } = await import('./pipeline/ocr.ts')
-        const concurrency = navigator.hardwareConcurrency > 4 ? 3 : 2
-        const recognized = await recognizeAll(
-          files.map((file) => ({ id: file.id, blob: file.blob })),
-          (done, total) => {
-            if (runId.current !== token) return
-            setPhase({
-              type: 'guess',
-              kind: 'own',
-              ready: false,
-              holding: Boolean(pending.current),
-              progress: { label: 'Reading the words', done, total },
-              note,
-            })
-          },
-          concurrency,
-          () => runId.current === token,
-        )
+      const paint = (kind: 'words' | 'model' | 'pictures' | 'ready', done: number, total: number) => {
         if (runId.current !== token) return
-        const textOf = new Map(recognized.map((item) => [item.id, item.text]))
-        job.current = {
-          kind: 'own',
-          note,
-          shots: files.map((file) => ({
-            id: file.id,
-            timestamp: file.timestamp,
-            timestampSource: file.timestampSource,
-            text: textOf.get(file.id) ?? '',
-          })),
-        }
-        readyRef.current = true
+        const safeTotal = kind === 'model' ? 100 : Math.max(0, total)
+        const safeDone = clampCount(done, safeTotal)
+        const sentence = backgroundSentence(kind, safeDone, safeTotal)
         setPhase({
           type: 'guess',
           kind: 'own',
-          ready: true,
+          ready: kind === 'ready',
           holding: Boolean(pending.current),
-          progress: { label: 'Ready when you are', done: files.length, total: files.length },
+          picking: pickingRef.current,
+          progress: { label: sentence, detail: sentence, done: safeDone, total: safeTotal },
           note,
         })
+      }
+      loreCache.current = null
+      const run = startBackgroundReading<CachedLore>(async (report, alive) => {
+        const say = (kind: 'words' | 'model' | 'pictures' | 'ready', done: number, total: number) => {
+          const sentence = backgroundSentence(kind, done, total)
+          report({ label: sentence, done, total })
+          paint(kind, done, total)
+        }
+        const { readRoll } = await import('./pipeline/readRoll.ts')
+        let wordDone = 0
+        let pictureDone = 0
+        const reading = await readRoll(files, {
+          alive,
+          onDownload: (loaded, total) => {
+            if (!alive() || total <= 0 || loaded >= total) return
+            say('model', Math.min(99, Math.round((loaded / total) * 100)), 100)
+          },
+          onWords: (done, total) => {
+            wordDone = done
+            if (wordDone >= pictureDone) say('words', wordDone, total)
+          },
+          onPictures: (done, total) => {
+            pictureDone = done
+            if (pictureDone >= wordDone) say('pictures', pictureDone, total)
+          },
+        })
+        if (!alive() || !reading) return null as unknown as CachedLore
+        job.current = { kind: 'own', note, shots: reading.shots }
+        return reading
+      })
+      loreRun.current = run
+      run.start()
+      try {
+        const cached = await run.result()
+        if (runId.current !== token || !cached) return
+        loreCache.current = cached
+        readyRef.current = true
+        paint('ready', files.length, files.length)
         if (pending.current) await finish()
-      } catch {
+      } catch (error) {
+        console.error('Lore failed during lore', error)
         if (runId.current !== token) return
+        const detail = error instanceof Error ? error.message : ''
+        const download = /fetch|network|failed to fetch|lang|traineddata|huggingface/i.test(detail)
         setPhase({
           type: 'error',
-          message:
-            'The text reader could not start. It downloads a language file once, then stays on this device. Nothing was uploaded.',
+          step: 2,
+          message: download
+            ? "The picture reader didn't download. Check your connection and try again."
+            : 'The reading stopped on this computer. Nothing was uploaded.',
         })
       }
     },
@@ -263,6 +314,9 @@ export function useSession() {
     pending.current = null
     finishing.current = false
     readyRef.current = false
+    loreRun.current?.cancel()
+    loreRun.current = null
+    loreCache.current = null
     revoke()
     blobs.current.clear()
     images.current = new Map(SAMPLE_SHOTS.map((shot) => [shot.id, sampleImageUrl(shot.id)]))
@@ -274,52 +328,78 @@ export function useSession() {
     }))
     job.current = { kind: 'sample', shots, note: SAMPLE_NOTE }
     const total = shots.length
+    pickingRef.current = true
+    loreCache.current = null
+    const run = startBackgroundReading<CachedLore>(async (_report, alive) => {
+      if (!alive()) return null as unknown as CachedLore
+      const result = await analyzeShots(shots, { runDate: new Date().toISOString() })
+      return { result, visual: new Map(), shots }
+    })
+    loreRun.current = run
+    run.start()
     setPhase({
       type: 'guess',
       kind: 'sample',
       ready: false,
       holding: false,
-      progress: { label: 'Opening the sample roll', done: 0, total },
+      picking: true,
+      progress: {
+        label: backgroundSentence('words', 0, total),
+        detail: backgroundSentence('words', 0, total),
+        done: 0,
+        total,
+      },
       note: SAMPLE_NOTE,
     })
-    for (let done = 4; done <= total; done += 4) {
-      await pause(45)
-      if (runId.current !== token) return
-      setPhase({
-        type: 'guess',
-        kind: 'sample',
-        ready: false,
-        holding: Boolean(pending.current),
-        progress: { label: 'Opening the sample roll', done: Math.min(done, total), total },
-        note: SAMPLE_NOTE,
-      })
-    }
-    if (runId.current !== token) return
+    const cached = await run.result()
+    if (runId.current !== token || !cached) return
+    loreCache.current = cached
     readyRef.current = true
+    const readyLine = backgroundSentence('ready', total, total)
     setPhase({
       type: 'guess',
       kind: 'sample',
       ready: true,
       holding: Boolean(pending.current),
-      progress: { label: 'Ready when you are', done: total, total },
+      picking: pickingRef.current,
+      progress: { label: readyLine, detail: readyLine, done: total, total },
       note: SAMPLE_NOTE,
     })
     if (pending.current) await finish()
   }, [finish, revoke])
 
   const startFiles = useCallback(
-    async (files: File[]) => {
+    async (files: File[], alreadyUnreadable = 0) => {
       const token = ++runId.current
       pending.current = null
       finishing.current = false
       readyRef.current = false
+      loreRun.current?.cancel()
+      loreRun.current = null
+      loreCache.current = null
       revoke()
       blobs.current.clear()
       images.current.clear()
-      setPhase({ type: 'preparing', progress: { label: 'Checking the files', done: 0, total: Math.max(files.length, 1) } })
+      void import('./pipeline/vision.ts')
+        .then(({ preloadVision }) => preloadVision())
+        .catch((error) => console.error('Lore failed during model', error))
+      void import('./pipeline/embed.ts')
+        .then(({ preloadEmbed }) => preloadEmbed())
+        .catch((error) => console.error('Lore failed during model', error))
+      const incoming = Array.from(files ?? [])
+      if (incoming.length === 0) {
+        const count = alreadyUnreadable
+        setPhase({
+          type: 'error',
+          step: 1,
+          message: count > 0 ? `Couldn't read ${count} file${count === 1 ? '' : 's'}.` : 'Choose a PNG, JPG, or HEIC picture.',
+        })
+        return
+      }
+      setPhase({ type: 'preparing', progress: { label: 'Checking the files', done: 0, total: Math.max(incoming.length, 1) } })
       try {
         const prepared = await prepareFiles(
-          files,
+          incoming,
           (done, total, label) => {
             if (runId.current !== token) return
             setPhase({ type: 'preparing', progress: { label, done, total } })
@@ -327,16 +407,21 @@ export function useSession() {
           () => runId.current === token,
         )
         if (runId.current !== token) return
+        const unreadable = prepared.unreadable + alreadyUnreadable
         if (prepared.files.length === 0) {
           setPhase({
             type: 'error',
-            message: 'Those files were not screenshots we can read. Try PNG, JPG, or HEIC.',
+            step: 1,
+            message:
+              unreadable > 0
+                ? `Couldn't read ${unreadable} file${unreadable === 1 ? '' : 's'}.`
+                : 'Choose a PNG, JPG, or HEIC picture.',
           })
           return
         }
         const bits = [
           prepared.duplicates ? `Removed ${prepared.duplicates} duplicate${prepared.duplicates === 1 ? '' : 's'}.` : '',
-          prepared.unreadable ? `Could not open ${prepared.unreadable}.` : '',
+          unreadable ? `Couldn't read ${unreadable} file${unreadable === 1 ? '' : 's'}.` : '',
           prepared.skipped ? `Skipped ${prepared.skipped} that were not images.` : '',
         ].filter(Boolean)
         const note = bits.join(' ')
@@ -345,18 +430,33 @@ export function useSession() {
           return
         }
         await beginOwn(prepared.files, note)
-      } catch {
+      } catch (error) {
+        console.error('Lore failed during open', error)
         if (runId.current !== token) return
-        setPhase({ type: 'error', message: 'Those files could not be opened on this device. Nothing was uploaded.' })
+        setPhase({
+          type: 'error',
+          step: 1,
+          message: "Couldn't open those pictures. Nothing was uploaded.",
+        })
       }
     },
     [beginOwn, revoke],
   )
 
+  const failOpen = useCallback((message: string) => {
+    console.error('Lore failed during open', message)
+    setPhase({ type: 'error', step: 1, message })
+  }, [])
+
   const startDrop = useCallback(
     async (data: DataTransfer) => {
-      const files = await filesFromDataTransfer(data)
-      await startFiles(files)
+      try {
+        const files = await filesFromDataTransfer(data)
+        await startFiles(files)
+      } catch (error) {
+        console.error('Lore failed during open', error)
+        setPhase({ type: 'error', step: 1, message: "Couldn't read that folder." })
+      }
     },
     [startFiles],
   )
@@ -370,14 +470,34 @@ export function useSession() {
     [beginOwn],
   )
 
+  const showPicker = useCallback(() => {
+    pickingRef.current = false
+    const current = phaseRef.current
+    if (current.type === 'guess') setPhase({ ...current, picking: false })
+  }, [])
+
+  const skipGuess = useCallback(async () => {
+    pickingRef.current = false
+    pending.current = { guesses: [], block: '' }
+    if (readyRef.current) {
+      await finish()
+      return
+    }
+    const current = phaseRef.current
+    if (current.type === 'guess') setPhase({ ...current, picking: false, holding: true })
+  }, [finish])
+
   const submitGuess = useCallback(
     async (guesses: string[], block: string) => {
       pending.current = { guesses, block }
+      if (readyRef.current) {
+        await finish()
+        return
+      }
       const current = phaseRef.current
       if (current.type === 'guess') {
         setPhase({ ...current, holding: true })
       }
-      if (readyRef.current) await finish()
     },
     [finish],
   )
@@ -435,8 +555,12 @@ export function useSession() {
   const readAnother = useCallback(() => {
     runId.current += 1
     pending.current = null
+    pickingRef.current = true
     finishing.current = false
     readyRef.current = false
+    loreRun.current?.cancel()
+    loreRun.current = null
+    loreCache.current = null
     job.current = null
     revoke()
     blobs.current.clear()
@@ -447,8 +571,12 @@ export function useSession() {
   const forget = useCallback(async () => {
     runId.current += 1
     pending.current = null
+    pickingRef.current = true
     finishing.current = false
     readyRef.current = false
+    loreRun.current?.cancel()
+    loreRun.current = null
+    loreCache.current = null
     job.current = null
     revoke()
     blobs.current.clear()
@@ -468,8 +596,11 @@ export function useSession() {
     startSample,
     startFiles,
     startDrop,
+    failOpen,
     confirmRange,
     submitGuess,
+    showPicker,
+    skipGuess,
     setKept,
     openSaved,
     readAnother,
