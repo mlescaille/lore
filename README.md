@@ -66,7 +66,7 @@ That writes `public/sample/<id>.png`. “Load sample” then runs the real theme
 
 On an Astro site on Vercel, copy `dist/` into the site’s `public/lore/` directory (so `index.html` is served at `/lore/` and `/lore/assets/…` resolves), or rewrite `/lore` and `/lore/*` to this build. Do not strip the base path.
 
-`SHARE_URL` in `src/config.ts` is `https://mlescaille.com/lore`, the link in share posts. `ESSAY_URL`, the footer link “the idea behind Lore”, is still a placeholder.
+`SHARE_URL` in `src/config.ts` is `https://mlescaille.com/lore`, the link in share posts. `ESSAY_URL`, the link “the idea behind Lore”, is `https://www.mlescaille.com/writing/lore-screenshots-as-your-bio/`.
 
 ## Not in v1
 

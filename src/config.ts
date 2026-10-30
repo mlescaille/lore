@@ -1,5 +1,5 @@
-/** ESSAY_URL stays a placeholder until the essay exists. SHARE_URL is the public Lore link in posts and the share card. */
-export const ESSAY_URL = 'https://example.com/the-screenshot-as-autobiography'
+/** SHARE_URL is the public Lore link in posts and the share card. ESSAY_URL is the published companion essay. */
+export const ESSAY_URL = 'https://www.mlescaille.com/writing/lore-screenshots-as-your-bio/'
 export const SHARE_URL = 'https://mlescaille.com/lore'
 export const APP_URL = SHARE_URL
 
